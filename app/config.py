@@ -23,3 +23,9 @@ TEMPLATE_XLSX = Path(
 # Tài khoản admin khởi tạo lần đầu.
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+# Token cho REST API (để phần mềm khác đọc số liệu). Đổi khi chạy thật.
+API_TOKEN = os.getenv("API_TOKEN", "thng-api-token-doi-di")
+
+# Tự động chốt báo cáo cuối tháng (True/False) và khoảng kiểm tra (giây).
+TU_DONG_CHOT = os.getenv("TU_DONG_CHOT", "true").lower() == "true"

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo đã lưu - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Báo cáo đã lưu</h1>
+  <form method="post" action="/bao-cao-luu/chot" class="inline-filter">
+    <label>Kỳ (năm)
+      <input type="text" name="ky" placeholder="vd 2026 (để trống = toàn bộ)"
+             style="padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px">
+    </label>
+    <button type="submit" class="btn">📌 Chốt báo cáo ngay</button>
+  </form>
+</div>
+
+<p class="muted">Chốt báo cáo sẽ tạo một bản Excel (đúng mẫu THNG) tại thời điểm hiện tại và
+lưu lại để tải về sau. Hệ thống cũng <b>tự động chốt mỗi tháng một lần</b> (bản có nhãn
+<code>[TĐ ...]</code>).</p>
+
+{% if items %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Tên báo cáo</th><th>Kỳ</th><th>Thời điểm chốt</th><th>Dung lượng</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for bc in items %}
+      <tr>
+        <td>{{ bc.ten }}</td>
+        <td>{{ bc.ky or 'Toàn bộ' }}</td>
+        <td>{{ bc.thoi_gian.strftime('%d/%m/%Y %H:%M') if bc.thoi_gian else '' }}</td>
+        <td>{{ (bc.so_byte / 1024)|round(0)|int }} KB</td>
+        <td class="actions">
+          <a href="/bao-cao-luu/tai/{{ bc.id }}">⬇️ Tải</a>
+          {% if can_delete(user) %}
+          <form method="post" action="/bao-cao-luu/xoa/{{ bc.id }}"
+                onsubmit="return confirm('Xoá báo cáo này?');">
+            <button type="submit" class="link danger">Xoá</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có báo cáo nào được lưu. Bấm <b>Chốt báo cáo ngay</b> để tạo bản đầu tiên.</p>
+{% endif %}
+{% endblock %}

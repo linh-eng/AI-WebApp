@@ -12,9 +12,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import calculations, excel_export, importer, models, web_meta
-from .config import BASE_DIR, SECRET_KEY
-from .database import Base, engine, get_db
+from fastapi import Header
+
+from . import (calculations, charts, connectors, excel_export, importer, models,
+               web_meta)
+from .config import API_TOKEN, BASE_DIR, SECRET_KEY, TU_DONG_CHOT
+from .database import Base, SessionLocal, engine, get_db
 from .security import hash_password, verify_password
 from .seed import khoi_tao_du_lieu
 
@@ -39,6 +42,36 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 def _startup():
     Base.metadata.create_all(bind=engine)
     khoi_tao_du_lieu()
+    if TU_DONG_CHOT:
+        import threading
+        threading.Thread(target=_scheduler_loop, daemon=True).start()
+
+
+def _scheduler_loop():
+    """Mỗi giờ kiểm tra: nếu sang tháng mới thì tự chốt & lưu 1 báo cáo (1 lần/tháng)."""
+    import time
+
+    while True:
+        try:
+            _auto_chot_neu_can()
+        except Exception:
+            pass
+        time.sleep(3600)
+
+
+def _auto_chot_neu_can():
+    now = datetime.now()
+    tag = f"[TĐ {now:%Y-%m}]"  # mỗi tháng dương lịch chỉ chốt tự động 1 lần
+    db = SessionLocal()
+    try:
+        da_co = db.scalar(select(models.BaoCaoLuu).where(
+            models.BaoCaoLuu.ten.like(tag + "%")))
+        if da_co:
+            return
+        ten = f"{tag} Báo cáo tự động tháng {now:%m/%Y}"
+        _chot_bao_cao(db, str(now.year), ten)
+    finally:
+        db.close()
 
 
 # ---- Bộ lọc hiển thị cho template ---------------------------------------
@@ -147,15 +180,23 @@ def dashboard(request: Request, nam: int | None = None, db: Session = Depends(ge
     thanh_toans = db.scalars(select(models.ThanhToan)).all()
     cac_nam = _danh_sach_nam(bao_gias, hop_dongs, thanh_toans)
 
-    tq = calculations.tong_quan(
-        khachs,
-        _loc_nam(bao_gias, "ngay", nam),
-        _loc_nam(hop_dongs, "ngay_ky", nam),
-        _loc_nam(thanh_toans, "ngay_thu", nam),
-    )
+    bg_loc = _loc_nam(bao_gias, "ngay", nam)
+    hd_loc = _loc_nam(hop_dongs, "ngay_ky", nam)
+    tt_loc = _loc_nam(thanh_toans, "ngay_thu", nam)
+    tq = calculations.tong_quan(khachs, bg_loc, hd_loc, tt_loc)
+
+    # Biểu đồ (SVG server-side)
+    svg_thang = charts.bieu_do_thang(calculations.dien_bien_thang(hd_loc, tt_loc))
+    svg_no = charts.bieu_do_tuoi_no(
+        calculations.co_cau_tuoi_no(khachs, bg_loc, hd_loc, tt_loc))
+    svg_thang_thau = charts.bieu_do_vong(tq["ty_le_thang"], "Thắng thầu")
+    svg_dung_han = charts.bieu_do_vong(tq["ty_le_giao_dung_han"], "Giao đúng hạn")
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request, "user": user, "tq": tq, "active": "dashboard",
         "cac_nam": cac_nam, "nam_chon": nam,
+        "svg_thang": svg_thang, "svg_no": svg_no,
+        "svg_thang_thau": svg_thang_thau, "svg_dung_han": svg_dung_han,
     })
 
 
@@ -364,6 +405,215 @@ def _display_value(field: dict, value):
     return value
 
 
+# ---- Helper: upsert danh sách bản ghi (dùng cho nhập file & đồng bộ URL) --
+
+def _upsert_records(db: Session, ent: dict, records: list[dict]) -> dict:
+    kq = {"them": 0, "cap_nhat": 0, "bo_qua": 0, "loi": None}
+    field_by_name = {f["name"]: f for f in ent["fields"]}
+    pk = ent["pk"]
+    for rec in records:
+        ma = str(rec.get(pk) or "").strip()
+        if not ma:
+            kq["bo_qua"] += 1
+            continue
+        obj = db.scalar(select(ent["model"]).where(getattr(ent["model"], pk) == ma))
+        moi = obj is None
+        if moi:
+            obj = ent["model"]()
+            db.add(obj)
+        for name, raw in rec.items():
+            f = field_by_name.get(name)
+            if f:
+                setattr(obj, name, importer.coerce(f, raw))
+        kq["them" if moi else "cap_nhat"] += 1
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        return {"them": 0, "cap_nhat": 0, "bo_qua": 0,
+                "loi": "Lỗi khi lưu (mã trùng hoặc dữ liệu không hợp lệ)."}
+    return kq
+
+
+# ---- Kết nối nguồn dữ liệu ngoài (Admin) --------------------------------
+
+def _lay_nguon(db: Session, slug: str) -> models.NguonDuLieu:
+    ng = db.scalar(select(models.NguonDuLieu).where(models.NguonDuLieu.slug == slug))
+    if not ng:
+        ng = models.NguonDuLieu(slug=slug, url="", dinh_dang="csv", bat=False)
+        db.add(ng)
+        db.commit()
+    return ng
+
+
+@app.get("/nguon-du-lieu", response_class=HTMLResponse)
+def nguon_list(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    if not _is_admin(user):
+        return RedirectResponse("/", status_code=303)
+    nguons = [{"ent": ENTITIES[s], "slug": s, "cfg": _lay_nguon(db, s)} for s in ENTITIES]
+    return templates.TemplateResponse(request, "nguon_du_lieu.html", {
+        "request": request, "user": user, "active": "nguon-du-lieu", "nguons": nguons,
+    })
+
+
+@app.post("/nguon-du-lieu/luu")
+async def nguon_luu(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user or not _is_admin(user):
+        return _redirect_login() if not user else RedirectResponse("/", status_code=303)
+    form = await request.form()
+    for slug in ENTITIES:
+        ng = _lay_nguon(db, slug)
+        ng.url = (form.get(f"url_{slug}") or "").strip()
+        ng.dinh_dang = form.get(f"dinh_dang_{slug}") or "csv"
+        ng.bat = form.get(f"bat_{slug}") == "on"
+    db.commit()
+    return RedirectResponse("/nguon-du-lieu", status_code=303)
+
+
+@app.post("/nguon-du-lieu/dong-bo/{slug}")
+def nguon_dong_bo(slug: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user or not _is_admin(user):
+        return _redirect_login() if not user else RedirectResponse("/", status_code=303)
+    if slug not in ENTITIES:
+        return RedirectResponse("/nguon-du-lieu", status_code=303)
+    ent = ENTITIES[slug]
+    ng = _lay_nguon(db, slug)
+    records, loi = connectors.doc_tu_url(ng.url, ng.dinh_dang, ent["fields"])
+    if loi:
+        ng.ket_qua_cuoi = f"Lỗi: {loi}"
+    else:
+        kq = _upsert_records(db, ent, records)
+        if kq["loi"]:
+            ng.ket_qua_cuoi = kq["loi"]
+        else:
+            ng.ket_qua_cuoi = (f"Thêm {kq['them']} · cập nhật {kq['cap_nhat']} "
+                               f"· bỏ qua {kq['bo_qua']}")
+    ng.lan_cuoi = datetime.now()
+    db.commit()
+    return RedirectResponse("/nguon-du-lieu", status_code=303)
+
+
+# ---- REST API cho phần mềm khác đọc số liệu -----------------------------
+
+def _kiem_tra_token(token: str | None) -> bool:
+    return bool(token) and token == API_TOKEN
+
+
+@app.get("/api/tong-quan")
+def api_tong_quan(x_api_token: str | None = Header(default=None),
+                  token: str | None = None, db: Session = Depends(get_db)):
+    if not _kiem_tra_token(x_api_token or token):
+        return Response('{"loi":"Sai token"}', status_code=401,
+                        media_type="application/json")
+    tq = calculations.tong_quan(
+        db.scalars(select(models.KhachHang)).all(),
+        db.scalars(select(models.BaoGia)).all(),
+        db.scalars(select(models.HopDong)).all(),
+        db.scalars(select(models.ThanhToan)).all(),
+    )
+    return tq
+
+
+@app.get("/api/{slug}")
+def api_list(slug: str, x_api_token: str | None = Header(default=None),
+             token: str | None = None, db: Session = Depends(get_db)):
+    if not _kiem_tra_token(x_api_token or token):
+        return Response('{"loi":"Sai token"}', status_code=401,
+                        media_type="application/json")
+    if slug not in ENTITIES:
+        return Response('{"loi":"Không có dữ liệu"}', status_code=404,
+                        media_type="application/json")
+    ent = ENTITIES[slug]
+    records = db.scalars(select(ent["model"])).all()
+    out = []
+    for r in records:
+        row = {}
+        for f in ent["fields"]:
+            v = getattr(r, f["name"])
+            row[f["name"]] = v.isoformat() if isinstance(v, (date, datetime)) else v
+        out.append(row)
+    return out
+
+
+# ---- Chốt & lưu báo cáo định kỳ -----------------------------------------
+
+def _chot_bao_cao(db: Session, ky: str, ten: str) -> models.BaoCaoLuu:
+    """Sinh file Excel hiện tại và lưu vào CSDL. ky rỗng = toàn bộ."""
+    nam = int(ky) if ky.isdigit() else None
+    data = excel_export.xuat_bao_cao(
+        db.scalars(select(models.KhachHang)).all(),
+        _loc_nam(db.scalars(select(models.BaoGia)).all(), "ngay", nam),
+        _loc_nam(db.scalars(select(models.HopDong)).all(), "ngay_ky", nam),
+        _loc_nam(db.scalars(select(models.ThanhToan)).all(), "ngay_thu", nam),
+    )
+    bc = models.BaoCaoLuu(ten=ten, ky=ky, thoi_gian=datetime.now(),
+                          so_byte=len(data), du_lieu=data)
+    db.add(bc)
+    db.commit()
+    return bc
+
+
+@app.get("/bao-cao-luu", response_class=HTMLResponse)
+def bao_cao_luu_list(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    items = db.scalars(select(models.BaoCaoLuu).order_by(
+        models.BaoCaoLuu.id.desc())).all()
+    return templates.TemplateResponse(request, "bao_cao_luu.html", {
+        "request": request, "user": user, "active": "bao-cao-luu", "items": items,
+    })
+
+
+@app.post("/bao-cao-luu/chot")
+async def bao_cao_luu_chot(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    form = await request.form()
+    ky = (form.get("ky") or "").strip()
+    if ky and not ky.isdigit():
+        ky = ""
+    ten = f"Báo cáo {'năm ' + ky if ky else 'toàn bộ'} (chốt {datetime.now():%d/%m/%Y %H:%M})"
+    _chot_bao_cao(db, ky, ten)
+    return RedirectResponse("/bao-cao-luu", status_code=303)
+
+
+@app.get("/bao-cao-luu/tai/{bid}")
+def bao_cao_luu_tai(bid: int, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    bc = db.get(models.BaoCaoLuu, bid)
+    if not bc:
+        return RedirectResponse("/bao-cao-luu", status_code=303)
+    ten = f"{bc.ky or 'toanbo'}_{bc.id}.xlsx"
+    return Response(
+        content=bc.du_lieu,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="Bao_cao_{ten}"'},
+    )
+
+
+@app.post("/bao-cao-luu/xoa/{bid}")
+def bao_cao_luu_xoa(bid: int, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user or not _can_delete(user):
+        return _redirect_login() if not user else RedirectResponse("/bao-cao-luu", status_code=303)
+    bc = db.get(models.BaoCaoLuu, bid)
+    if bc:
+        db.delete(bc)
+        db.commit()
+    return RedirectResponse("/bao-cao-luu", status_code=303)
+
+
+# ---- Bộ khung CRUD chung theo /{slug} (đăng ký CUỐI để không che route cụ thể) ----
+
 @app.get("/{slug}", response_class=HTMLResponse)
 def list_view(slug: str, request: Request, nam: int | None = None,
               thang: int | None = None, ma_kh: str = "",
@@ -548,32 +798,10 @@ async def import_post(slug: str, request: Request, db: Session = Depends(get_db)
         if loi:
             ket_qua["loi"] = loi
         else:
-            field_by_name = {f["name"]: f for f in ent["fields"]}
-            pk = ent["pk"]
-            for rec in records:
-                ma = str(rec.get(pk) or "").strip()
-                if not ma:
-                    ket_qua["bo_qua"] += 1
-                    continue
-                obj = db.scalar(select(ent["model"]).where(
-                    getattr(ent["model"], pk) == ma))
-                moi = obj is None
-                if moi:
-                    obj = ent["model"]()
-                    db.add(obj)
-                for name, raw in rec.items():
-                    f = field_by_name.get(name)
-                    if f:
-                        setattr(obj, name, importer.coerce(f, raw))
-                ket_qua["them" if moi else "cap_nhat"] += 1
-            try:
-                db.commit()
-            except Exception:
-                db.rollback()
-                ket_qua = {"them": 0, "cap_nhat": 0, "bo_qua": 0,
-                           "loi": "Lỗi khi lưu (mã trùng hoặc dữ liệu không hợp lệ)."}
+            ket_qua = _upsert_records(db, ent, records)
 
     return templates.TemplateResponse(request, "import.html", {
         "request": request, "user": user, "slug": slug, "active": slug,
         "title": ent["title"], "fields": ent["fields"], "ket_qua": ket_qua,
     })
+

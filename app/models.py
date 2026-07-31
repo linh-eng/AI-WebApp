@@ -4,10 +4,11 @@ Quy trình: Báo giá -> PO/Hợp đồng -> Thanh toán -> Công nợ (tính đ
 Chỉ lưu dữ liệu NHẬP TAY; các giá trị công thức (tên KH, giá sau VAT, công nợ,
 tình trạng tiến độ...) được tính động ở tầng calculations.py.
 """
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (Boolean, Date, DateTime, Float, Integer, LargeBinary,
+                        String, Text)
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
 
@@ -85,3 +86,33 @@ class ThanhToan(Base):
     so_tien_thu: Mapped[float] = mapped_column(Float, default=0)
     hinh_thuc: Mapped[str] = mapped_column(String(60), default="")
     dot_noi_dung: Mapped[str] = mapped_column(String(200), default="")
+
+
+class NguonDuLieu(Base):
+    """Cấu hình kết nối nguồn dữ liệu ngoài (Giai đoạn 3).
+
+    Mỗi màn hình (khach-hang/bao-gia/hop-dong/thanh-toan) có thể đồng bộ tự động
+    từ một URL trả về CSV hoặc JSON (vd Google Sheets publish-to-web, hoặc endpoint
+    xuất dữ liệu của phần mềm bán hàng/ERP công ty).
+    """
+    __tablename__ = "nguon_du_lieu"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    url: Mapped[str] = mapped_column(Text, default="")
+    dinh_dang: Mapped[str] = mapped_column(String(10), default="csv")  # csv | json
+    bat: Mapped[bool] = mapped_column(Boolean, default=False)
+    lan_cuoi: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ket_qua_cuoi: Mapped[str] = mapped_column(String(300), default="")
+
+
+class BaoCaoLuu(Base):
+    """Báo cáo Excel đã chốt & lưu (thủ công hoặc theo lịch cuối tháng)."""
+    __tablename__ = "bao_cao_luu"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ten: Mapped[str] = mapped_column(String(200))
+    ky: Mapped[str] = mapped_column(String(20), index=True)  # vd "2026-07" hoặc "2026"
+    thoi_gian: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    so_byte: Mapped[int] = mapped_column(Integer, default=0)
+    du_lieu: Mapped[bytes] = mapped_column(LargeBinary)

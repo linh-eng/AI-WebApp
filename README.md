@@ -22,6 +22,16 @@ Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Ch
 - **Bộ lọc** theo năm / tháng / khách hàng ở các danh sách; lọc theo năm khi xem
   Tổng quan và khi xuất báo cáo Excel.
 
+**Giai đoạn 3**
+- **Biểu đồ trực quan** trên Tổng quan (SVG, chạy offline không cần internet):
+  diễn biến theo tháng, tỷ lệ thắng thầu / giao đúng hạn, cơ cấu công nợ theo tuổi nợ.
+- **Kết nối nguồn dữ liệu ngoài** (Admin): đồng bộ tự động từ một URL trả CSV/JSON
+  (Google Sheets, phần mềm bán hàng/ERP…). Trùng mã → cập nhật, mã mới → thêm.
+- **REST API** cho hệ thống khác đọc số liệu (`/api/tong-quan`, `/api/{màn-hình}`),
+  bảo vệ bằng `API_TOKEN`.
+- **Chốt & lưu báo cáo định kỳ**: nút chốt báo cáo thủ công + **tự động chốt mỗi
+  tháng**; trang lưu trữ tải lại file Excel bất kỳ lúc nào.
+
 ## Chạy nhanh (không cần Docker)
 
 ```bash
@@ -48,6 +58,8 @@ Dữ liệu SQLite được lưu trong volume `thng_data` (an toàn khi rebuild)
 | `DATABASE_URL` | SQLite trong `data/` | Đổi sang PostgreSQL nếu cần |
 | `TEMPLATE_XLSX` | `docs/templates/Mau_bao_cao_kinh_doanh_THNG.xlsx` | File Excel mẫu |
 | `DATA_DIR` | `data/` | Nơi lưu CSDL SQLite |
+| `API_TOKEN` | (mẫu) | Token cho REST API — **đổi khi chạy thật** |
+| `TU_DONG_CHOT` | `true` | Bật/tắt tự động chốt báo cáo hằng tháng |
 
 ## Cách giữ nguyên định dạng Excel
 

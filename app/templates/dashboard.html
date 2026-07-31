@@ -35,6 +35,24 @@
   <div class="kpi danger"><span>Số PO trễ hạn</span><b>{{ tq.po_tre_han }}</b></div>
 </div>
 
+<div class="chart-grid">
+  <div class="chart-card wide">
+    <h3>Diễn biến theo tháng</h3>
+    {{ svg_thang|safe }}
+  </div>
+  <div class="chart-card">
+    <h3>Tỷ lệ</h3>
+    <div class="donut-row">
+      {{ svg_thang_thau|safe }}
+      {{ svg_dung_han|safe }}
+    </div>
+  </div>
+  <div class="chart-card wide">
+    <h3>Cơ cấu công nợ theo tuổi nợ (còn phải thu)</h3>
+    {{ svg_no|safe }}
+  </div>
+</div>
+
 <p class="muted">Quy trình: Báo giá → PO/Hợp đồng → Tiến độ &amp; Chất lượng → Thanh toán / Công nợ.
 Bấm <b>Xuất báo cáo Excel</b> để tải file đúng mẫu THNG (giữ nguyên định dạng &amp; công thức).</p>
 {% endblock %}

@@ -188,3 +188,40 @@ def tong_quan(
         "ty_le_giao_dung_han": ty_le_giao_dung_han,
         "so_khach_hang": len(khachs),
     }
+
+
+# ---- Dữ liệu cho biểu đồ (Giai đoạn 3) ----------------------------------
+
+def dien_bien_thang(hop_dongs, thanh_toans) -> list[dict]:
+    """Số liệu 12 tháng: giá trị HĐ ký & tiền thu (theo tháng của dữ liệu đã lọc)."""
+    gt = [0.0] * 12
+    thu = [0.0] * 12
+    for h in hop_dongs:
+        if h.ngay_ky:
+            gt[h.ngay_ky.month - 1] += h.gia_tri_hop_dong or 0
+    for t in thanh_toans:
+        if t.ngay_thu:
+            thu[t.ngay_thu.month - 1] += t.so_tien_thu or 0
+    return [{"thang": m + 1, "gt_hd_ky": gt[m], "tien_thu": thu[m]} for m in range(12)]
+
+
+# Thứ tự nhóm tuổi nợ (từ nhẹ đến nặng), để vẽ biểu đồ công nợ
+NHOM_TUOI_NO = [
+    "Trong hạn", "Quá hạn 1-30 ngày", "Quá hạn 31-60 ngày",
+    "Quá hạn 61-90 ngày", "Quá hạn trên 90 ngày",
+]
+
+
+def co_cau_tuoi_no(khachs, bao_gias, hop_dongs, thanh_toans,
+                   today: date | None = None) -> list[dict]:
+    """Tổng 'còn phải thu' theo từng nhóm tuổi nợ (bỏ nhóm đã thu đủ)."""
+    today = today or date.today()
+    bg_index = {b.ma_bao_gia: b for b in bao_gias}
+    kh_index = {k.ma_kh: k for k in khachs}
+    tong = {n: 0.0 for n in NHOM_TUOI_NO}
+    for h in hop_dongs:
+        c = cong_no_theo_po(h, thanh_toans, bg_index, kh_index, today)
+        nhom = c["nhom_tuoi_no"]
+        if nhom in tong:
+            tong[nhom] += c["con_phai_thu"]
+    return [{"nhom": n, "so_tien": tong[n]} for n in NHOM_TUOI_NO]

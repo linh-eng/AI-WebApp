@@ -16,8 +16,10 @@
       <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá</a>
       <a href="/hop-dong" class="{{ 'on' if active=='hop-dong' }}">📄 Hợp đồng / PO</a>
       <a href="/thanh-toan" class="{{ 'on' if active=='thanh-toan' }}">💰 Thanh toán</a>
+      <a href="/bao-cao-luu" class="{{ 'on' if active=='bao-cao-luu' }}">🗂️ Báo cáo đã lưu</a>
       {% if is_admin(user) %}
       <a href="/nguoi-dung" class="{{ 'on' if active=='nguoi-dung' }}">🔑 Người dùng</a>
+      <a href="/nguon-du-lieu" class="{{ 'on' if active=='nguon-du-lieu' }}">🔌 Nguồn dữ liệu</a>
       {% endif %}
       <a href="/xuat-excel" class="export">⬇️ Xuất báo cáo Excel</a>
     </nav>

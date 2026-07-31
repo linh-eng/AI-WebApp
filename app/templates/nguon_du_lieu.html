@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Nguồn dữ liệu - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Kết nối nguồn dữ liệu ngoài</h1>
+</div>
+
+<p class="muted">Đồng bộ tự động từ một <b>URL</b> trả về CSV hoặc JSON — ví dụ Google Sheets
+(Publish to web dạng CSV), hoặc endpoint xuất dữ liệu của phần mềm bán hàng/kế toán/ERP.
+Cột được ghép theo tên tiêu đề như file mẫu nhập. Trùng mã sẽ cập nhật, mã mới sẽ thêm.</p>
+
+<form method="post" action="/nguon-du-lieu/luu">
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Màn hình</th><th>URL nguồn</th><th>Định dạng</th><th>Bật</th>
+          <th>Lần đồng bộ cuối</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for ng in nguons %}
+      <tr>
+        <td><b>{{ ng.ent.title }}</b></td>
+        <td><input type="url" name="url_{{ ng.slug }}" value="{{ ng.cfg.url }}"
+                   placeholder="https://..." style="width:100%"></td>
+        <td>
+          <select name="dinh_dang_{{ ng.slug }}">
+            <option value="csv" {{ 'selected' if ng.cfg.dinh_dang=='csv' }}>CSV</option>
+            <option value="json" {{ 'selected' if ng.cfg.dinh_dang=='json' }}>JSON</option>
+          </select>
+        </td>
+        <td style="text-align:center">
+          <input type="checkbox" name="bat_{{ ng.slug }}" {{ 'checked' if ng.cfg.bat }}>
+        </td>
+        <td class="muted" style="font-size:12px">
+          {% if ng.cfg.lan_cuoi %}{{ ng.cfg.lan_cuoi.strftime('%d/%m/%Y %H:%M') }}<br>
+          {{ ng.cfg.ket_qua_cuoi }}{% else %}—{% endif %}
+        </td>
+        <td>
+          <button type="submit" formaction="/nguon-du-lieu/dong-bo/{{ ng.slug }}"
+                  class="btn sm">Đồng bộ ngay</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="form-actions"><button type="submit" class="btn">💾 Lưu cấu hình</button></div>
+</form>
+
+<h3 style="margin-top:26px">REST API cho phần mềm khác</h3>
+<p class="muted">Hệ thống khác có thể đọc số liệu qua API (kèm token). Ví dụ:</p>
+<pre class="code">GET /api/tong-quan?token=&lt;API_TOKEN&gt;
+GET /api/khach-hang?token=&lt;API_TOKEN&gt;
+GET /api/bao-gia   ·  /api/hop-dong  ·  /api/thanh-toan
+(hoặc gửi header  X-API-Token: &lt;API_TOKEN&gt;)</pre>
+<p class="muted">Đặt token bằng biến môi trường <code>API_TOKEN</code> khi chạy thật.</p>
+{% endblock %}

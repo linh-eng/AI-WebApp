@@ -94,7 +94,18 @@ td.actions form{display:inline}
 .cols summary{cursor:pointer}
 .cols ul{columns:2;margin:8px 0}
 
+/* ---- Phase 3: charts, data source, saved reports ---- */
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.chart-card.wide{grid-column:1 / -1}
+.chart-card h3{margin:0 0 12px;font-size:14px;color:#374151}
+.donut-row{display:flex;gap:10px;justify-content:space-around;flex-wrap:wrap}
+pre.code{background:#0f172a;color:#e2e8f0;padding:14px 16px;border-radius:8px;
+  font-size:13px;overflow-x:auto;line-height:1.6}
+code{background:#eef3f9;padding:1px 6px;border-radius:4px;font-size:13px}
+
 @media(max-width:820px){
+  .chart-grid{grid-template-columns:1fr}
   .layout{flex-direction:column}
   .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;padding:10px}
   .sidebar nav{flex-direction:row;flex-wrap:wrap}

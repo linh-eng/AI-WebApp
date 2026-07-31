@@ -64,10 +64,10 @@ Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Ch
 - [x] Phân quyền: Nhân viên / Trưởng phòng / Admin (+ màn hình quản lý người dùng).
 - [x] Bộ lọc theo tháng/năm/khách hàng (danh sách, tổng quan, xuất báo cáo).
 
-### Giai đoạn 3
-- [ ] **Kết nối CSDL/phần mềm có sẵn** của công ty để lấy số liệu tự động.
-- [ ] Biểu đồ/dashboard trực tiếp trên web.
-- [ ] Lịch tự động chốt báo cáo cuối tháng.
+### Giai đoạn 3 ✅ ĐÃ XONG
+- [x] **Kết nối nguồn dữ liệu ngoài**: đồng bộ tự động từ URL (CSV/JSON) + **REST API** cho phần mềm khác đọc số liệu.
+- [x] **Biểu đồ/dashboard trực tiếp trên web** (SVG, chạy offline): diễn biến theo tháng, tỷ lệ thắng thầu/giao đúng hạn, cơ cấu công nợ theo tuổi nợ.
+- [x] **Lịch tự động chốt báo cáo** cuối tháng + trang lưu trữ báo cáo đã chốt (tải lại được).
 
 ## 4. Công nghệ đề xuất
 
