@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết báo giá {{ bg.ma_bao_gia }} - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Chi tiết báo giá {{ bg.ma_bao_gia }}</h1>
+  <div class="head-actions">
+    <a class="btn ghost" href="/bao-gia">← Danh sách</a>
+    <a class="btn" href="/bao-gia/{{ bg.ma_bao_gia }}/pdf" target="_blank">🖨️ Xuất PDF</a>
+  </div>
+</div>
+
+<p class="muted">Khách hàng: <b>{{ bg.ma_kh }}</b> · Nội dung: {{ bg.noi_dung }} ·
+  VAT: {{ bg.vat|percent }}. Khi có dòng hàng, <b>Giá trị trước VAT</b> của báo giá
+  tự cập nhật = tổng các dòng.</p>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Sản phẩm</th><th>Tên hàng</th><th>ĐVT</th><th>Số lượng</th>
+          <th>Đơn giá</th><th>Thành tiền</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for d in dongs %}
+      <tr>
+        <td>{{ d.ma_sp }}</td>
+        <td>{{ d.ten_hang }}</td>
+        <td>{{ d.don_vi }}</td>
+        <td>{{ d.so_luong|money }}</td>
+        <td>{{ d.don_gia|money }}</td>
+        <td>{{ (d.so_luong * d.don_gia)|money }}</td>
+        <td class="actions">
+          <form method="post" action="/bao-gia/{{ bg.ma_bao_gia }}/chi-tiet/xoa/{{ d.id }}"
+                onsubmit="return confirm('Xoá dòng này?');">
+            <button type="submit" class="link danger">Xoá</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not dongs %}
+      <tr><td colspan="7" class="muted">Chưa có dòng hàng. Thêm ở dưới.</td></tr>
+      {% endif %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" style="text-align:right"><b>Cộng trước VAT</b></td>
+        <td colspan="2"><b>{{ tong|money }} ₫</b></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<h3 style="margin-top:22px">Thêm dòng hàng</h3>
+<form method="post" action="/bao-gia/{{ bg.ma_bao_gia }}/chi-tiet/them" class="entity-form">
+  <div class="form-grid">
+    <label><span>Chọn sản phẩm (tự điền)</span>
+      <select id="sp" onchange="dienSP()">
+        <option value="">-- nhập tay --</option>
+        {% for s in san_phams %}
+        <option value="{{ s.ma_sp }}" data-ten="{{ s.ten }}" data-dv="{{ s.don_vi }}"
+                data-gia="{{ s.don_gia }}">{{ s.ma_sp }} - {{ s.ten }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span>Mã SP</span><input type="text" name="ma_sp" id="ma_sp"></label>
+    <label><span>Tên hàng</span><input type="text" name="ten_hang" id="ten_hang"></label>
+    <label><span>ĐVT</span><input type="text" name="don_vi" id="don_vi"></label>
+    <label><span>Số lượng</span><input type="text" name="so_luong" inputmode="decimal" value="1"></label>
+    <label><span>Đơn giá (VNĐ)</span><input type="text" name="don_gia" id="don_gia" inputmode="decimal"></label>
+    <label><span>Ghi chú</span><input type="text" name="ghi_chu"></label>
+  </div>
+  <div class="form-actions"><button type="submit" class="btn">＋ Thêm dòng</button></div>
+</form>
+
+<script>
+function dienSP(){
+  var s=document.getElementById('sp'); var o=s.options[s.selectedIndex];
+  if(!o.value) return;
+  document.getElementById('ma_sp').value=o.value;
+  document.getElementById('ten_hang').value=o.dataset.ten||'';
+  document.getElementById('don_vi').value=o.dataset.dv||'';
+  document.getElementById('don_gia').value=o.dataset.gia||'';
+}
+</script>
+{% endblock %}

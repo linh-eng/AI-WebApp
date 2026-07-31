@@ -55,6 +55,10 @@
       <tr>
         {% for c in row.cells %}<td>{{ c }}</td>{% endfor %}
         <td class="actions">
+          {% if slug == 'bao-gia' %}
+          <a href="/bao-gia/{{ row.pk }}/chi-tiet">Chi tiết</a>
+          <a href="/bao-gia/{{ row.pk }}/pdf" target="_blank">PDF</a>
+          {% endif %}
           <a href="/{{ slug }}/sua/{{ row.pk }}">Sửa</a>
           {% if can_delete(user) %}
           <form method="post" action="/{{ slug }}/xoa/{{ row.pk }}"

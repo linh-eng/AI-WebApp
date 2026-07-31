@@ -43,6 +43,15 @@ FIELDS_HOP_DONG = [
     {"name": "ghi_chu", "label": "Ghi chú", "type": "text"},
 ]
 
+FIELDS_SAN_PHAM = [
+    {"name": "ma_sp", "label": "Mã sản phẩm", "type": "text", "required": True},
+    {"name": "ten", "label": "Tên sản phẩm", "type": "text", "required": True},
+    {"name": "don_vi", "label": "Đơn vị tính", "type": "text"},
+    {"name": "don_gia", "label": "Đơn giá (VNĐ)", "type": "money"},
+    {"name": "vat", "label": "VAT (%)", "type": "percent"},
+    {"name": "mo_ta", "label": "Mô tả", "type": "text"},
+]
+
 FIELDS_THANH_TOAN = [
     {"name": "ma_phieu_thu", "label": "Mã phiếu thu", "type": "text", "required": True},
     {"name": "ngay_thu", "label": "Ngày thu", "type": "date"},

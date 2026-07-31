@@ -45,6 +45,14 @@ def khoi_tao_du_lieu():
                 ma_phieu_thu="PT2026-001", ngay_thu=date(2026, 1, 20),
                 ma_po="PO2026-001", so_tien_thu=135_000_000,
                 hinh_thuc="Chuyển khoản", dot_noi_dung="Tạm ứng 50%"))
+            # Sản phẩm mẫu
+            db.add(models.SanPham(ma_sp="SP01", ten="Thép hộp 40x80", don_vi="cây",
+                                  don_gia=1_500_000, vat=0.08))
+            db.add(models.SanPham(ma_sp="SP02", ten="Sơn chống gỉ", don_vi="thùng",
+                                  don_gia=850_000, vat=0.08))
+            # Mục tiêu mẫu
+            db.add(models.MucTieu(nv="Nguyễn Văn A", nam=2026, thang=0,
+                                  chi_tieu=1_000_000_000))
             db.commit()
     finally:
         db.close()

@@ -94,6 +94,19 @@ td.actions form{display:inline}
 .cols summary{cursor:pointer}
 .cols ul{columns:2;margin:8px 0}
 
+/* ---- Modules: alerts badge, KPI progress ---- */
+.badge{display:inline-block;background:#dc2626;color:#fff;font-size:11px;font-weight:700;
+  min-width:18px;text-align:center;padding:1px 6px;border-radius:10px;margin-left:4px}
+.badge.big{font-size:14px;padding:2px 10px;vertical-align:middle}
+.progress{display:inline-block;width:130px;height:9px;background:#e5e9f0;border-radius:5px;
+  overflow:hidden;vertical-align:middle}
+.progress .bar{height:100%;border-radius:5px}
+.progress .bar.ok{background:#0a7d3c}
+.progress .bar.mid{background:#eda100}
+.progress .bar.low{background:#dc2626}
+.pct{font-size:12px;color:var(--muted);margin-left:8px}
+tfoot td{background:#f8fafc;border-top:2px solid var(--line);padding:10px 12px}
+
 /* ---- Phase 3: charts, data source, saved reports ---- */
 .chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:22px}
 .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}

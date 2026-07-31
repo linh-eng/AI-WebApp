@@ -44,3 +44,7 @@ API_TOKEN = os.getenv("API_TOKEN", "thng-api-token-doi-di")
 
 # Tự động chốt báo cáo cuối tháng (True/False) và khoảng kiểm tra (giây).
 TU_DONG_CHOT = os.getenv("TU_DONG_CHOT", "true").lower() == "true"
+
+# Thông tin công ty (hiển thị trên PDF báo giá/hợp đồng).
+COMPANY_NAME = os.getenv("COMPANY_NAME", "CÔNG TY THNG")
+COMPANY_INFO = os.getenv("COMPANY_INFO", "Địa chỉ: ... · ĐT: ... · MST: ...")

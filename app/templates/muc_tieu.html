@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Mục tiêu doanh số - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Mục tiêu doanh số</h1>
+  <form method="get" action="/muc-tieu" class="inline-filter">
+    <label>Năm
+      <select name="nam" onchange="this.form.submit()">
+        {% for n in cac_nam %}
+        <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+        {% endfor %}
+        {% if nam_chon not in cac_nam %}<option value="{{ nam_chon }}" selected>{{ nam_chon }}</option>{% endif %}
+      </select>
+    </label>
+  </form>
+</div>
+
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi"><span>Tổng chỉ tiêu năm {{ nam_chon }}</span><b>{{ tong_ct|money }}</b></div>
+  <div class="kpi good"><span>Tổng thực đạt</span><b>{{ tong_dat|money }}</b></div>
+  <div class="kpi hl"><span>Hoàn thành chung</span><b>{{ phan_tram_chung|percent }}</b></div>
+</div>
+
+{% if rows %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Nhân viên</th><th>Kỳ</th><th>Chỉ tiêu</th><th>Thực đạt</th>
+          <th>Tiến độ</th>{% if can_sua %}<th></th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.nv }}</td>
+        <td>{{ 'Cả năm' if r.thang == 0 else 'Tháng ' ~ r.thang }}</td>
+        <td>{{ r.chi_tieu|money }}</td>
+        <td>{{ r.thuc_dat|money }}</td>
+        <td>
+          <div class="progress">
+            <div class="bar {{ 'ok' if r.phan_tram >= 1 else ('mid' if r.phan_tram >= 0.7 else 'low') }}"
+                 style="width:{{ (r.phan_tram * 100)|round(0)|int if r.phan_tram < 1 else 100 }}%"></div>
+          </div>
+          <span class="pct">{{ r.phan_tram|percent }}</span>
+        </td>
+        {% if can_sua %}
+        <td class="actions">
+          <form method="post" action="/muc-tieu/xoa/{{ r.id }}"
+                onsubmit="return confirm('Xoá mục tiêu này?');">
+            <button type="submit" class="link danger">Xoá</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có mục tiêu cho năm {{ nam_chon }}.
+  {% if can_sua %}Thêm ở dưới.{% endif %}</p>
+{% endif %}
+
+{% if can_sua %}
+<h3 style="margin-top:22px">Đặt / cập nhật mục tiêu</h3>
+<form method="post" action="/muc-tieu/luu" class="entity-form">
+  <div class="form-grid">
+    <label class="req"><span>Nhân viên</span>
+      <input type="text" name="nv" list="ds_nv" placeholder="Tên NV phụ trách" required>
+      <datalist id="ds_nv">{% for nv in ds_nv %}<option value="{{ nv }}">{% endfor %}</datalist>
+    </label>
+    <label class="req"><span>Năm</span>
+      <input type="number" name="nam" value="{{ nam_chon }}" required>
+    </label>
+    <label><span>Kỳ</span>
+      <select name="thang">
+        <option value="0">Cả năm</option>
+        {% for m in range(1, 13) %}<option value="{{ m }}">Tháng {{ m }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="req"><span>Chỉ tiêu (VNĐ)</span>
+      <input type="text" name="chi_tieu" inputmode="decimal" placeholder="vd 500.000.000" required>
+    </label>
+  </div>
+  <div class="form-actions"><button type="submit" class="btn">💾 Lưu mục tiêu</button></div>
+</form>
+<p class="muted">Thực đạt = tổng giá trị hợp đồng ký (theo tháng ký), quy về NV phụ trách
+  của báo giá gốc. Trùng (NV, năm, kỳ) sẽ được cập nhật.</p>
+{% endif %}
+{% endblock %}

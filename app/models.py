@@ -88,6 +88,44 @@ class ThanhToan(Base):
     dot_noi_dung: Mapped[str] = mapped_column(String(200), default="")
 
 
+class SanPham(Base):
+    """Danh mục sản phẩm / bảng giá."""
+    __tablename__ = "san_pham"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ma_sp: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    ten: Mapped[str] = mapped_column(String(200))
+    don_vi: Mapped[str] = mapped_column(String(30), default="")
+    don_gia: Mapped[float] = mapped_column(Float, default=0)
+    vat: Mapped[float] = mapped_column(Float, default=0.08)
+    mo_ta: Mapped[str] = mapped_column(String(300), default="")
+
+
+class BaoGiaDong(Base):
+    """Chi tiết dòng hàng của một báo giá (số lượng × đơn giá)."""
+    __tablename__ = "bao_gia_dong"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ma_bao_gia: Mapped[str] = mapped_column(String(40), index=True)
+    ma_sp: Mapped[str] = mapped_column(String(40), default="")
+    ten_hang: Mapped[str] = mapped_column(String(200), default="")
+    don_vi: Mapped[str] = mapped_column(String(30), default="")
+    so_luong: Mapped[float] = mapped_column(Float, default=0)
+    don_gia: Mapped[float] = mapped_column(Float, default=0)
+    ghi_chu: Mapped[str] = mapped_column(String(200), default="")
+
+
+class MucTieu(Base):
+    """Mục tiêu doanh số theo nhân viên và kỳ (tháng của 1 năm; thang=0 là cả năm)."""
+    __tablename__ = "muc_tieu"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nv: Mapped[str] = mapped_column(String(120), index=True)
+    nam: Mapped[int] = mapped_column(Integer, index=True)
+    thang: Mapped[int] = mapped_column(Integer, default=0)  # 0 = cả năm, 1..12 = tháng
+    chi_tieu: Mapped[float] = mapped_column(Float, default=0)
+
+
 class NguonDuLieu(Base):
     """Cấu hình kết nối nguồn dữ liệu ngoài (Giai đoạn 3).
 

@@ -12,10 +12,15 @@
     <div class="brand">THNG<span>Báo cáo Kinh doanh</span></div>
     <nav>
       <a href="/" class="{{ 'on' if active=='dashboard' }}">📊 Tổng quan</a>
+      {% set n_cb = so_canh_bao() %}
+      <a href="/can-xu-ly" class="{{ 'on' if active=='can-xu-ly' }}">⚠️ Cần xử lý
+        {% if n_cb %}<span class="badge">{{ n_cb }}</span>{% endif %}</a>
       <a href="/khach-hang" class="{{ 'on' if active=='khach-hang' }}">👥 Khách hàng</a>
+      <a href="/san-pham" class="{{ 'on' if active=='san-pham' }}">📦 Sản phẩm</a>
       <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá</a>
       <a href="/hop-dong" class="{{ 'on' if active=='hop-dong' }}">📄 Hợp đồng / PO</a>
       <a href="/thanh-toan" class="{{ 'on' if active=='thanh-toan' }}">💰 Thanh toán</a>
+      <a href="/muc-tieu" class="{{ 'on' if active=='muc-tieu' }}">🎯 Mục tiêu doanh số</a>
       <a href="/bao-cao-luu" class="{{ 'on' if active=='bao-cao-luu' }}">🗂️ Báo cáo đã lưu</a>
       {% if is_admin(user) %}
       <a href="/nguoi-dung" class="{{ 'on' if active=='nguoi-dung' }}">🔑 Người dùng</a>

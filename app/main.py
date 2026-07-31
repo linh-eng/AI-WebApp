@@ -331,6 +331,10 @@ ENTITIES = {
         "model": models.ThanhToan, "pk": "ma_phieu_thu", "title": "Thanh toán",
         "fields": web_meta.FIELDS_THANH_TOAN,
     },
+    "san-pham": {
+        "model": models.SanPham, "pk": "ma_sp", "title": "Sản phẩm",
+        "fields": web_meta.FIELDS_SAN_PHAM,
+    },
 }
 
 
@@ -350,6 +354,9 @@ def _select_options(db: Session, source: str) -> list[tuple[str, str]]:
     if source == "hop_dong":
         return [(h.ma_po, f"{h.ma_po} - {h.so_hop_dong}")
                 for h in db.scalars(select(models.HopDong)).all()]
+    if source == "san_pham":
+        return [(s.ma_sp, f"{s.ma_sp} - {s.ten}")
+                for s in db.scalars(select(models.SanPham)).all()]
     return []
 
 
@@ -610,6 +617,203 @@ def bao_cao_luu_xoa(bid: int, request: Request, db: Session = Depends(get_db)):
         db.delete(bc)
         db.commit()
     return RedirectResponse("/bao-cao-luu", status_code=303)
+
+
+# ---- Module: Chi tiết dòng hàng của Báo giá -----------------------------
+
+def _cap_nhat_tong_bao_gia(db: Session, ma_bao_gia: str):
+    """Cập nhật giá trị trước VAT của báo giá = tổng các dòng hàng (nếu có)."""
+    dongs = db.scalars(select(models.BaoGiaDong).where(
+        models.BaoGiaDong.ma_bao_gia == ma_bao_gia)).all()
+    if not dongs:
+        return
+    tong = sum((d.so_luong or 0) * (d.don_gia or 0) for d in dongs)
+    bg = db.scalar(select(models.BaoGia).where(models.BaoGia.ma_bao_gia == ma_bao_gia))
+    if bg:
+        bg.gia_truoc_vat = tong
+        db.commit()
+
+
+@app.get("/bao-gia/{ma}/chi-tiet", response_class=HTMLResponse)
+def bg_chi_tiet(ma: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    bg = db.scalar(select(models.BaoGia).where(models.BaoGia.ma_bao_gia == ma))
+    if not bg:
+        return RedirectResponse("/bao-gia", status_code=303)
+    dongs = db.scalars(select(models.BaoGiaDong).where(
+        models.BaoGiaDong.ma_bao_gia == ma)).all()
+    san_phams = db.scalars(select(models.SanPham)).all()
+    tong = sum((d.so_luong or 0) * (d.don_gia or 0) for d in dongs)
+    return templates.TemplateResponse(request, "bao_gia_chi_tiet.html", {
+        "request": request, "user": user, "active": "bao-gia", "bg": bg,
+        "dongs": dongs, "san_phams": san_phams, "tong": tong,
+    })
+
+
+@app.post("/bao-gia/{ma}/chi-tiet/them")
+async def bg_chi_tiet_them(ma: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    form = await request.form()
+    d = models.BaoGiaDong(
+        ma_bao_gia=ma,
+        ma_sp=(form.get("ma_sp") or "").strip(),
+        ten_hang=(form.get("ten_hang") or "").strip(),
+        don_vi=(form.get("don_vi") or "").strip(),
+        so_luong=importer.coerce({"type": "number"}, form.get("so_luong")),
+        don_gia=importer.coerce({"type": "money"}, form.get("don_gia")),
+        ghi_chu=(form.get("ghi_chu") or "").strip(),
+    )
+    db.add(d)
+    db.commit()
+    _cap_nhat_tong_bao_gia(db, ma)
+    return RedirectResponse(f"/bao-gia/{ma}/chi-tiet", status_code=303)
+
+
+@app.post("/bao-gia/{ma}/chi-tiet/xoa/{did}")
+def bg_chi_tiet_xoa(ma: str, did: int, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    d = db.get(models.BaoGiaDong, did)
+    if d and d.ma_bao_gia == ma:
+        db.delete(d)
+        db.commit()
+        _cap_nhat_tong_bao_gia(db, ma)
+    return RedirectResponse(f"/bao-gia/{ma}/chi-tiet", status_code=303)
+
+
+# ---- Module: Xuất PDF báo giá -------------------------------------------
+
+@app.get("/bao-gia/{ma}/pdf")
+def bg_pdf(ma: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    bg = db.scalar(select(models.BaoGia).where(models.BaoGia.ma_bao_gia == ma))
+    if not bg:
+        return RedirectResponse("/bao-gia", status_code=303)
+    khach = db.scalar(select(models.KhachHang).where(models.KhachHang.ma_kh == bg.ma_kh))
+    dongs = db.scalars(select(models.BaoGiaDong).where(
+        models.BaoGiaDong.ma_bao_gia == ma)).all()
+    from . import pdf_export
+    data = pdf_export.xuat_pdf_bao_gia(bg, khach, dongs)
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="BaoGia_{ma}.pdf"'})
+
+
+# ---- Module: Nhắc nợ & cảnh báo (Cần xử lý) -----------------------------
+
+def _tinh_canh_bao(db: Session) -> dict:
+    return calculations.canh_bao(
+        db.scalars(select(models.KhachHang)).all(),
+        db.scalars(select(models.BaoGia)).all(),
+        db.scalars(select(models.HopDong)).all(),
+        db.scalars(select(models.ThanhToan)).all(),
+    )
+
+
+def _so_canh_bao() -> int:
+    db = SessionLocal()
+    try:
+        return _tinh_canh_bao(db)["tong"]
+    except Exception:
+        return 0
+    finally:
+        db.close()
+
+
+templates.env.globals["so_canh_bao"] = _so_canh_bao
+
+
+@app.get("/can-xu-ly", response_class=HTMLResponse)
+def can_xu_ly(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    cb = _tinh_canh_bao(db)
+    return templates.TemplateResponse(request, "can_xu_ly.html", {
+        "request": request, "user": user, "active": "can-xu-ly", "cb": cb,
+    })
+
+
+# ---- Module: Mục tiêu doanh số (KPI) ------------------------------------
+
+@app.get("/muc-tieu", response_class=HTMLResponse)
+def muc_tieu_view(request: Request, nam: int | None = None,
+                  db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    bao_gias = db.scalars(select(models.BaoGia)).all()
+    hop_dongs = db.scalars(select(models.HopDong)).all()
+    muc_tieus = db.scalars(select(models.MucTieu)).all()
+    cac_nam = sorted({m.nam for m in muc_tieus} |
+                     {h.ngay_ky.year for h in hop_dongs if h.ngay_ky})
+    if nam is None:
+        nam = cac_nam[-1] if cac_nam else date.today().year
+    rows = calculations.bao_cao_muc_tieu(muc_tieus, bao_gias, hop_dongs, nam)
+    ds_nv = sorted({(b.nv_phu_trach or "").strip()
+                    for b in bao_gias if (b.nv_phu_trach or "").strip()})
+    # Tổng chỉ tiêu: ưu tiên các dòng "cả năm"; nếu không có thì cộng tất cả.
+    dong_ca_nam = [r for r in rows if r["thang"] == 0]
+    tong_ct = (sum(r["chi_tieu"] for r in dong_ca_nam) if dong_ca_nam
+               else sum(r["chi_tieu"] for r in rows))
+    # Tổng thực đạt theo năm (không đếm trùng): tổng giá trị HĐ ký trong năm.
+    thuc_dat_map = calculations.thuc_dat_theo_nv(bao_gias, hop_dongs, nam)
+    tong_dat = sum(m.get(0, 0) for m in thuc_dat_map.values())
+    return templates.TemplateResponse(request, "muc_tieu.html", {
+        "request": request, "user": user, "active": "muc-tieu", "rows": rows,
+        "cac_nam": cac_nam, "nam_chon": nam, "ds_nv": ds_nv,
+        "tong_ct": tong_ct, "tong_dat": tong_dat,
+        "phan_tram_chung": (tong_dat / tong_ct) if tong_ct else 0,
+        "can_sua": _can_delete(user),
+    })
+
+
+@app.post("/muc-tieu/luu")
+async def muc_tieu_luu(request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    if not _can_delete(user):  # Nhân viên không được đặt mục tiêu
+        return RedirectResponse("/muc-tieu", status_code=303)
+    form = await request.form()
+    nv = (form.get("nv") or "").strip()
+    try:
+        nam = int(form.get("nam"))
+        thang = int(form.get("thang") or 0)
+    except (TypeError, ValueError):
+        return RedirectResponse("/muc-tieu", status_code=303)
+    chi_tieu = importer.coerce({"type": "money"}, form.get("chi_tieu"))
+    if not nv:
+        return RedirectResponse("/muc-tieu", status_code=303)
+    # Trùng (nv, năm, tháng) thì cập nhật
+    mt = db.scalar(select(models.MucTieu).where(
+        models.MucTieu.nv == nv, models.MucTieu.nam == nam,
+        models.MucTieu.thang == thang))
+    if not mt:
+        mt = models.MucTieu(nv=nv, nam=nam, thang=thang)
+        db.add(mt)
+    mt.chi_tieu = chi_tieu
+    db.commit()
+    return RedirectResponse(f"/muc-tieu?nam={nam}", status_code=303)
+
+
+@app.post("/muc-tieu/xoa/{mid}")
+def muc_tieu_xoa(mid: int, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user or not _can_delete(user):
+        return _redirect_login() if not user else RedirectResponse("/muc-tieu", status_code=303)
+    mt = db.get(models.MucTieu, mid)
+    nam = mt.nam if mt else ""
+    if mt:
+        db.delete(mt)
+        db.commit()
+    return RedirectResponse(f"/muc-tieu?nam={nam}", status_code=303)
 
 
 # ---- Bộ khung CRUD chung theo /{slug} (đăng ký CUỐI để không che route cụ thể) ----

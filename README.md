@@ -32,6 +32,15 @@ Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Ch
 - **Chốt & lưu báo cáo định kỳ**: nút chốt báo cáo thủ công + **tự động chốt mỗi
   tháng**; trang lưu trữ tải lại file Excel bất kỳ lúc nào.
 
+**Giai đoạn 4 (mở rộng)**
+- **Nhắc nợ & cảnh báo tự động** — trang **Cần xử lý** + số cảnh báo trên menu:
+  công nợ quá hạn, báo giá sắp/đã hết hiệu lực, PO trễ giao hàng.
+- **Danh mục sản phẩm + chi tiết dòng hàng báo giá** (số lượng × đơn giá, tự cộng;
+  giá trị trước VAT của báo giá tự cập nhật theo dòng hàng).
+- **Xuất PDF báo giá** — file PDF có tiếng Việt, logo/thông tin công ty, gửi thẳng khách.
+- **Mục tiêu doanh số (KPI)** — đặt chỉ tiêu theo nhân viên & kỳ, so sánh thực đạt,
+  thanh tiến độ % hoàn thành.
+
 ## Chạy nhanh (không cần Docker)
 
 ```bash

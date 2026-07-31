@@ -225,3 +225,93 @@ def co_cau_tuoi_no(khachs, bao_gias, hop_dongs, thanh_toans,
         if nhom in tong:
             tong[nhom] += c["con_phai_thu"]
     return [{"nhom": n, "so_tien": tong[n]} for n in NHOM_TUOI_NO]
+
+
+# ---- Nhắc nợ & cảnh báo (Module mới) ------------------------------------
+
+def canh_bao(khachs, bao_gias, hop_dongs, thanh_toans,
+             today: date | None = None, so_ngay_bao_gia: int = 7) -> dict:
+    """Tổng hợp việc cần xử lý: công nợ quá hạn, báo giá sắp/đã hết hiệu lực, PO trễ."""
+    from datetime import timedelta
+
+    today = today or date.today()
+    bg_index = {b.ma_bao_gia: b for b in bao_gias}
+    kh_index = {k.ma_kh: k for k in khachs}
+
+    no_qua_han = []
+    for h in hop_dongs:
+        c = cong_no_theo_po(h, thanh_toans, bg_index, kh_index, today)
+        if c["con_phai_thu"] > 0 and c["so_ngay_qua_han"] > 0:
+            no_qua_han.append(c)
+    no_qua_han.sort(key=lambda c: c["so_ngay_qua_han"], reverse=True)
+
+    bao_gia_sap_het = []
+    for b in bao_gias:
+        if b.trang_thai == "Đang chào" and b.hieu_luc_den:
+            con = (b.hieu_luc_den - today).days
+            if con <= so_ngay_bao_gia:  # sắp hết hoặc đã quá hạn
+                bao_gia_sap_het.append({
+                    "ma_bao_gia": b.ma_bao_gia,
+                    "khach": ten_khach_hang(b.ma_kh, kh_index),
+                    "hieu_luc_den": b.hieu_luc_den,
+                    "con_ngay": con,
+                    "gia_tri": gia_sau_vat(b),
+                })
+    bao_gia_sap_het.sort(key=lambda x: x["con_ngay"])
+
+    po_tre = []
+    for h in hop_dongs:
+        if tinh_trang_tien_do(h, today) == "Trễ hạn":
+            po_tre.append({
+                "ma_po": h.ma_po,
+                "khach": ten_khach_hang(ma_kh_cua_po(h, bg_index), kh_index),
+                "ngay_giao_cam_ket": h.ngay_giao_cam_ket,
+                "so_ngay_tre": so_ngay_tre(h, today),
+            })
+    po_tre.sort(key=lambda x: x["so_ngay_tre"], reverse=True)
+
+    return {
+        "no_qua_han": no_qua_han,
+        "bao_gia_sap_het": bao_gia_sap_het,
+        "po_tre": po_tre,
+        "tong": len(no_qua_han) + len(bao_gia_sap_het) + len(po_tre),
+    }
+
+
+# ---- Mục tiêu doanh số (KPI) --------------------------------------------
+
+def thuc_dat_theo_nv(bao_gias, hop_dongs, nam: int) -> dict:
+    """Doanh số thực đạt (giá trị HĐ ký) quy về NV phụ trách của báo giá gốc.
+
+    Trả về {nv: {0: cả_năm, 1..12: theo_tháng}} cho năm `nam`.
+    """
+    bg_index = {b.ma_bao_gia: b for b in bao_gias}
+    kq: dict[str, dict[int, float]] = {}
+    for h in hop_dongs:
+        if not h.ngay_ky or h.ngay_ky.year != nam:
+            continue
+        bg = bg_index.get(h.ma_bao_gia)
+        nv = (bg.nv_phu_trach if bg else "") or "(chưa gán)"
+        m = h.ngay_ky.month
+        d = kq.setdefault(nv, {i: 0.0 for i in range(13)})
+        d[m] += h.gia_tri_hop_dong or 0
+        d[0] += h.gia_tri_hop_dong or 0
+    return kq
+
+
+def bao_cao_muc_tieu(muc_tieus, bao_gias, hop_dongs, nam: int) -> list[dict]:
+    """Ghép mục tiêu với thực đạt, tính % hoàn thành."""
+    thuc_dat = thuc_dat_theo_nv(bao_gias, hop_dongs, nam)
+    rows = []
+    for mt in muc_tieus:
+        if mt.nam != nam:
+            continue
+        dat = thuc_dat.get(mt.nv, {}).get(mt.thang, 0.0)
+        rows.append({
+            "nv": mt.nv, "nam": mt.nam, "thang": mt.thang,
+            "chi_tieu": mt.chi_tieu, "thuc_dat": dat,
+            "phan_tram": (dat / mt.chi_tieu) if mt.chi_tieu else 0,
+            "id": mt.id,
+        })
+    rows.sort(key=lambda r: (r["nv"], r["thang"]))
+    return rows
