@@ -25,9 +25,15 @@ trong cùng mạng công ty (Wi‑Fi/LAN) mở trình duyệt vào **địa ch�
 
 ## C. Nhân viên truy cập
 
-- Mở trình duyệt (Chrome/Edge) gõ: **http://192.168.1.50:8000**
-  (thay `192.168.1.50` bằng IPv4 thật của máy chủ ở bước B5).
-- Đăng nhập bằng tài khoản do admin cấp.
+Mở trình duyệt (Chrome/Edge), dùng **một trong hai** địa chỉ (script in sẵn cả hai):
+
+- **Cách dễ nhớ (khuyên dùng khi không có IT):** bằng **tên máy chủ**, ví dụ
+  `http://MAY-KINHDOANH:8000`. Ưu điểm: **không đổi** kể cả khi IP thay đổi.
+- **Cách bằng IP:** `http://192.168.1.50:8000` (thay bằng IPv4 thật ở bước B5).
+
+Đăng nhập bằng tài khoản do admin cấp.
+
+> Nếu cách tên máy không vào được (một số mạng chặn), dùng cách IP.
 
 ## D. Tạo tài khoản cho nhân viên
 

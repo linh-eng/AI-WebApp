@@ -15,12 +15,15 @@ python -m pip install --disable-pip-version-check -q -r requirements.txt
 
 echo.
 echo ==========================================================
-echo   DIA CHI DE DONG NGHIEP TRUY CAP (chon dong IPv4 ben duoi,
-echo   thuong bat dau 192.168... hoac 10...):
+echo   DIA CHI DE DONG NGHIEP TRUY CAP:
 echo.
+echo   CACH 1 - Bang ten may (de nho, on dinh nhat):
+echo       http://%COMPUTERNAME%:8000
+echo.
+echo   CACH 2 - Bang dia chi IPv4 (chon dong 192.168... hoac 10...):
 ipconfig | findstr /C:"IPv4"
+echo       http://[DIA-CHI-IPv4]:8000
 echo.
-echo   Dong nghiep mo trinh duyet:  http://[DIA-CHI-IPv4]:8000
 echo   Tren chinh may nay:          http://127.0.0.1:8000
 echo   Dang nhap admin / admin123  (nho doi mat khau ngay)
 echo.
