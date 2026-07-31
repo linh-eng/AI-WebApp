@@ -52,17 +52,17 @@ Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Ch
 
 ## 3. Chức năng WebApp theo giai đoạn
 
-### Giai đoạn 1 — MVP (bản chạy được đầu tiên)
-- [ ] Đăng nhập tài khoản nội bộ.
-- [ ] Quản lý **Khách hàng** (thêm/sửa/xoá).
-- [ ] Nhập **Báo giá**, **Hợp đồng/PO**, **Thanh toán** qua form web (tự tính giá sau VAT, tình trạng, công nợ…).
-- [ ] Trang **Tổng quan** hiển thị KPI như dashboard file mẫu.
-- [ ] Nút **Xuất Excel** → sinh ra file đúng mẫu THNG để tải về.
+### Giai đoạn 1 — MVP (bản chạy được đầu tiên) ✅ ĐÃ XONG
+- [x] Đăng nhập tài khoản nội bộ.
+- [x] Quản lý **Khách hàng** (thêm/sửa/xoá).
+- [x] Nhập **Báo giá**, **Hợp đồng/PO**, **Thanh toán** qua form web (tự tính giá sau VAT, tình trạng, công nợ…).
+- [x] Trang **Tổng quan** hiển thị KPI như dashboard file mẫu.
+- [x] Nút **Xuất Excel** → sinh ra file đúng mẫu THNG để tải về.
 
-### Giai đoạn 2
-- [ ] **Upload Excel/CSV thô** để nhập nhanh nhiều dòng (thay vì gõ tay).
-- [ ] Phân quyền: Nhân viên / Trưởng phòng / Admin.
-- [ ] Bộ lọc theo tháng/năm/khách hàng, xem trước báo cáo.
+### Giai đoạn 2 ✅ ĐÃ XONG
+- [x] **Upload Excel/CSV thô** để nhập nhanh nhiều dòng (thay vì gõ tay).
+- [x] Phân quyền: Nhân viên / Trưởng phòng / Admin (+ màn hình quản lý người dùng).
+- [x] Bộ lọc theo tháng/năm/khách hàng (danh sách, tổng quan, xuất báo cáo).
 
 ### Giai đoạn 3
 - [ ] **Kết nối CSDL/phần mềm có sẵn** của công ty để lấy số liệu tự động.

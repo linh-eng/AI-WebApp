@@ -3,8 +3,46 @@
 {% block content %}
 <div class="page-head">
   <h1>{{ title }}</h1>
-  <a class="btn" href="/{{ slug }}/them">＋ Thêm mới</a>
+  <div class="head-actions">
+    <a class="btn ghost" href="/{{ slug }}/nhap">⬆️ Nhập từ Excel/CSV</a>
+    <a class="btn" href="/{{ slug }}/them">＋ Thêm mới</a>
+  </div>
 </div>
+
+{% if co_loc_ngay or co_loc_kh %}
+<form class="filter-bar" method="get" action="/{{ slug }}">
+  {% if co_loc_ngay %}
+  <label>Năm
+    <select name="nam" onchange="this.form.submit()">
+      <option value="">Tất cả</option>
+      {% for n in cac_nam %}
+      <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Tháng
+    <select name="thang" onchange="this.form.submit()">
+      <option value="">Tất cả</option>
+      {% for m in range(1, 13) %}
+      <option value="{{ m }}" {{ 'selected' if thang_chon == m }}>Tháng {{ m }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  {% if co_loc_kh %}
+  <label>Khách hàng
+    <select name="ma_kh" onchange="this.form.submit()">
+      <option value="">Tất cả</option>
+      {% for v, nhan in ds_khach %}
+      <option value="{{ v }}" {{ 'selected' if kh_chon == v }}>{{ nhan }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endif %}
+  <a class="btn ghost sm" href="/{{ slug }}">Bỏ lọc</a>
+  <span class="filter-count">{{ rows|length }} dòng</span>
+</form>
+{% endif %}
 
 {% if rows %}
 <div class="table-wrap">
@@ -18,10 +56,12 @@
         {% for c in row.cells %}<td>{{ c }}</td>{% endfor %}
         <td class="actions">
           <a href="/{{ slug }}/sua/{{ row.pk }}">Sửa</a>
+          {% if can_delete(user) %}
           <form method="post" action="/{{ slug }}/xoa/{{ row.pk }}"
                 onsubmit="return confirm('Xoá {{ row.pk }}?');">
             <button type="submit" class="link danger">Xoá</button>
           </form>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -29,6 +69,6 @@
   </table>
 </div>
 {% else %}
-<p class="muted">Chưa có dữ liệu. Bấm <b>Thêm mới</b> để bắt đầu.</p>
+<p class="muted">Chưa có dữ liệu. Bấm <b>Thêm mới</b> hoặc <b>Nhập từ Excel/CSV</b> để bắt đầu.</p>
 {% endif %}
 {% endblock %}

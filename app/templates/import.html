@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Nhập {{ title }} - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Nhập {{ title }} từ Excel/CSV</h1>
+  <a class="btn ghost" href="/{{ slug }}">← Quay lại danh sách</a>
+</div>
+
+{% if ket_qua %}
+  {% if ket_qua.loi %}
+  <div class="alert">❌ {{ ket_qua.loi }}</div>
+  {% else %}
+  <div class="alert ok">✅ Hoàn tất: thêm mới <b>{{ ket_qua.them }}</b> ·
+    cập nhật <b>{{ ket_qua.cap_nhat }}</b> · bỏ qua <b>{{ ket_qua.bo_qua }}</b> (thiếu mã).
+    <a href="/{{ slug }}">Xem danh sách →</a></div>
+  {% endif %}
+{% endif %}
+
+<div class="entity-form">
+  <ol class="steps">
+    <li>Tải <a href="/{{ slug }}/mau-nhap"><b>file mẫu (.csv)</b></a> rồi mở bằng Excel.</li>
+    <li>Điền dữ liệu (mỗi dòng một bản ghi). Giữ nguyên dòng tiêu đề.</li>
+    <li>Lưu lại rồi chọn file ở dưới và bấm <b>Nhập</b>.</li>
+  </ol>
+  <p class="muted">Chấp nhận file <b>.xlsx</b> hoặc <b>.csv</b>. Hệ thống ghép cột theo
+    tên tiêu đề. Bản ghi trùng mã sẽ được <b>cập nhật</b>; mã mới sẽ được <b>thêm</b>.</p>
+
+  <form method="post" action="/{{ slug }}/nhap" enctype="multipart/form-data" class="upload-form">
+    <input type="file" name="file" accept=".xlsx,.xls,.csv" required>
+    <button type="submit" class="btn">⬆️ Nhập</button>
+  </form>
+
+  <details class="cols">
+    <summary>Các cột trong file mẫu</summary>
+    <ul>{% for f in fields %}<li>{{ f.label }}{% if f.name == '' %}{% endif %}</li>{% endfor %}</ul>
+  </details>
+</div>
+{% endblock %}

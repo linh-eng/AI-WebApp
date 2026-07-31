@@ -3,7 +3,19 @@
 {% block content %}
 <div class="page-head">
   <h1>Tổng quan kinh doanh</h1>
-  <a class="btn" href="/xuat-excel">⬇️ Xuất báo cáo Excel</a>
+  <div class="head-actions">
+    <form method="get" action="/" class="inline-filter">
+      <label>Năm
+        <select name="nam" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          {% for n in cac_nam %}
+          <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+    <a class="btn" href="/xuat-excel{{ '?nam=' ~ nam_chon if nam_chon else '' }}">⬇️ Xuất báo cáo Excel</a>
+  </div>
 </div>
 
 <div class="kpi-grid">

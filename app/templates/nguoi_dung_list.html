@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Người dùng - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Quản lý người dùng</h1>
+  <a class="btn" href="/nguoi-dung/them">＋ Thêm người dùng</a>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ u.ho_ten }}</td>
+        <td>{{ ROLE_LABELS.get(u.vai_tro, u.vai_tro) }}</td>
+        <td class="actions">
+          <a href="/nguoi-dung/sua/{{ u.id }}">Sửa</a>
+          {% if u.id != user.id %}
+          <form method="post" action="/nguoi-dung/xoa/{{ u.id }}"
+                onsubmit="return confirm('Xoá tài khoản {{ u.username }}?');">
+            <button type="submit" class="link danger">Xoá</button>
+          </form>
+          {% else %}
+          <span class="muted">(bạn)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="muted">Vai trò: <b>Nhân viên</b> nhập/sửa dữ liệu · <b>Trưởng phòng</b> thêm quyền xoá ·
+<b>Admin</b> thêm quyền quản lý người dùng.</p>
+{% endblock %}

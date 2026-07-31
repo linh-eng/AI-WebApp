@@ -16,10 +16,14 @@
       <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá</a>
       <a href="/hop-dong" class="{{ 'on' if active=='hop-dong' }}">📄 Hợp đồng / PO</a>
       <a href="/thanh-toan" class="{{ 'on' if active=='thanh-toan' }}">💰 Thanh toán</a>
+      {% if is_admin(user) %}
+      <a href="/nguoi-dung" class="{{ 'on' if active=='nguoi-dung' }}">🔑 Người dùng</a>
+      {% endif %}
       <a href="/xuat-excel" class="export">⬇️ Xuất báo cáo Excel</a>
     </nav>
     <div class="user">
       <div>{{ user.ho_ten or user.username }}</div>
+      <div class="role-badge">{{ ROLE_LABELS.get(user.vai_tro, user.vai_tro) }}</div>
       <a href="/logout">Đăng xuất</a>
     </div>
   </aside>

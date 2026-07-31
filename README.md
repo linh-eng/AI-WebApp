@@ -5,13 +5,22 @@ theo file mẫu THNG** (giữ nguyên định dạng, công thức, bố cục).
 
 Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Chất lượng → Thanh toán → Công nợ.**
 
-## Tính năng (bản MVP - Giai đoạn 1)
+## Tính năng
 
+**Giai đoạn 1 (MVP)**
 - Đăng nhập tài khoản nội bộ.
 - Quản lý **Khách hàng, Báo giá, Hợp đồng/PO, Thanh toán** (thêm/sửa/xoá).
 - Tự động tính: giá sau VAT, tình trạng tiến độ, hạn thanh toán, công nợ, quá hạn…
 - Trang **Tổng quan** hiển thị KPI như dashboard file mẫu.
 - Nút **Xuất báo cáo Excel** → sinh file `.xlsx` đúng mẫu THNG để tải về.
+
+**Giai đoạn 2**
+- **Phân quyền 3 vai trò**: Nhân viên (nhập/sửa) · Trưởng phòng (thêm quyền xoá) ·
+  Admin (thêm quyền quản lý người dùng). Có màn hình **Quản lý người dùng** (Admin).
+- **Nhập nhanh từ Excel/CSV**: tải file mẫu, điền nhiều dòng rồi upload; trùng mã thì
+  cập nhật, mã mới thì thêm.
+- **Bộ lọc** theo năm / tháng / khách hàng ở các danh sách; lọc theo năm khi xem
+  Tổng quan và khi xuất báo cáo Excel.
 
 ## Chạy nhanh (không cần Docker)
 

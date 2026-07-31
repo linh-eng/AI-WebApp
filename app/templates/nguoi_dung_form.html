@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Người dùng - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Sửa' if is_edit else 'Thêm' }} người dùng</h1>
+  <a class="btn ghost" href="/nguoi-dung">← Quay lại</a>
+</div>
+
+{% if request.query_params.get('loi') %}
+<div class="alert">{{ request.query_params.get('loi') }}</div>
+{% endif %}
+
+<form method="post" action="/nguoi-dung/luu" class="entity-form">
+  {% if is_edit %}<input type="hidden" name="_uid" value="{{ obj.id }}">{% endif %}
+  <div class="form-grid">
+    <label class="req"><span>Tài khoản</span>
+      <input type="text" name="username" value="{{ obj.username if obj else '' }}" required>
+    </label>
+    <label><span>Họ tên</span>
+      <input type="text" name="ho_ten" value="{{ obj.ho_ten if obj else '' }}">
+    </label>
+    <label><span>Vai trò</span>
+      <select name="vai_tro">
+        {% for key, nhan in ROLE_LABELS.items() %}
+        <option value="{{ key }}" {{ 'selected' if obj and obj.vai_tro == key }}>{{ nhan }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="{{ '' if is_edit else 'req' }}">
+      <span>Mật khẩu {% if is_edit %}(để trống nếu không đổi){% endif %}</span>
+      <input type="password" name="mat_khau" {{ 'required' if not is_edit }}
+             autocomplete="new-password">
+    </label>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">💾 Lưu</button>
+    <a class="btn ghost" href="/nguoi-dung">Huỷ</a>
+  </div>
+</form>
+{% endblock %}
