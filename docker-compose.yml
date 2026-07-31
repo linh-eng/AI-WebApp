@@ -1,0 +1,18 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # ĐỔI khoá bí mật và mật khẩu admin khi chạy thật
+      SECRET_KEY: "doi-khoa-bi-mat-nay"
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "admin123"
+      # Muốn dùng PostgreSQL thì bỏ comment và trỏ tới CSDL của công ty:
+      # DATABASE_URL: "postgresql+psycopg2://user:pass@db:5432/thng"
+    volumes:
+      - thng_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  thng_data:

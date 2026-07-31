@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Báo cáo Kinh doanh THNG{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">THNG<span>Báo cáo Kinh doanh</span></div>
+    <nav>
+      <a href="/" class="{{ 'on' if active=='dashboard' }}">📊 Tổng quan</a>
+      <a href="/khach-hang" class="{{ 'on' if active=='khach-hang' }}">👥 Khách hàng</a>
+      <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá</a>
+      <a href="/hop-dong" class="{{ 'on' if active=='hop-dong' }}">📄 Hợp đồng / PO</a>
+      <a href="/thanh-toan" class="{{ 'on' if active=='thanh-toan' }}">💰 Thanh toán</a>
+      <a href="/xuat-excel" class="export">⬇️ Xuất báo cáo Excel</a>
+    </nav>
+    <div class="user">
+      <div>{{ user.ho_ten or user.username }}</div>
+      <a href="/logout">Đăng xuất</a>
+    </div>
+  </aside>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

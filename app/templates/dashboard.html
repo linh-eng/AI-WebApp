@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Tổng quan - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Tổng quan kinh doanh</h1>
+  <a class="btn" href="/xuat-excel">⬇️ Xuất báo cáo Excel</a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi"><span>Số báo giá phát hành</span><b>{{ tq.so_bao_gia }}</b></div>
+  <div class="kpi"><span>Tổng giá trị báo giá (VNĐ)</span><b>{{ tq.tong_gt_bao_gia|money }}</b></div>
+  <div class="kpi"><span>Giá trị báo giá thắng (VNĐ)</span><b>{{ tq.gt_thang|money }}</b></div>
+  <div class="kpi hl"><span>Tỷ lệ thắng thầu</span><b>{{ tq.ty_le_thang|percent }}</b></div>
+
+  <div class="kpi"><span>Số hợp đồng / PO đã ký</span><b>{{ tq.so_hop_dong }}</b></div>
+  <div class="kpi"><span>Tổng giá trị hợp đồng (VNĐ)</span><b>{{ tq.tong_gt_hop_dong|money }}</b></div>
+  <div class="kpi hl"><span>Tỷ lệ giao hàng đúng hạn</span><b>{{ tq.ty_le_giao_dung_han|percent }}</b></div>
+  <div class="kpi"><span>Số khách hàng</span><b>{{ tq.so_khach_hang }}</b></div>
+
+  <div class="kpi good"><span>Đã thu (VNĐ)</span><b>{{ tq.da_thu|money }}</b></div>
+  <div class="kpi warn"><span>Còn phải thu (VNĐ)</span><b>{{ tq.con_phai_thu|money }}</b></div>
+  <div class="kpi danger"><span>Nợ QUÁ HẠN (VNĐ)</span><b>{{ tq.no_qua_han|money }}</b></div>
+  <div class="kpi danger"><span>Số PO trễ hạn</span><b>{{ tq.po_tre_han }}</b></div>
+</div>
+
+<p class="muted">Quy trình: Báo giá → PO/Hợp đồng → Tiến độ &amp; Chất lượng → Thanh toán / Công nợ.
+Bấm <b>Xuất báo cáo Excel</b> để tải file đúng mẫu THNG (giữ nguyên định dạng &amp; công thức).</p>
+{% endblock %}

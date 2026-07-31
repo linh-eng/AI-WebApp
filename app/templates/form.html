@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'Sửa' if is_edit else 'Thêm' }} {{ title }}</h1>
+  <a class="btn ghost" href="/{{ slug }}">← Quay lại</a>
+</div>
+
+{% if request.query_params.get('loi') %}
+<div class="alert">{{ request.query_params.get('loi') }}</div>
+{% endif %}
+
+<form method="post" action="/{{ slug }}/luu" class="entity-form">
+  <input type="hidden" name="_is_edit" value="{{ '1' if is_edit else '0' }}">
+  {% if is_edit %}<input type="hidden" name="_pk" value="{{ pk }}">{% endif %}
+
+  <div class="form-grid">
+    {% for f in fields %}
+    <label class="{{ 'req' if f.required }}">
+      <span>{{ f.label }}</span>
+      {% set val = obj[f.name] if obj else '' %}
+      {% if f.type == 'select' %}
+        <select name="{{ f.name }}">
+          <option value="">-- chọn --</option>
+          {% for opt in f.options %}
+          <option value="{{ opt }}" {{ 'selected' if val == opt }}>
+            {{ f.option_labels[opt] if f.option_labels else opt }}
+          </option>
+          {% endfor %}
+        </select>
+      {% elif f.type == 'date' %}
+        <input type="date" name="{{ f.name }}" value="{{ val }}">
+      {% elif f.type in ('money', 'number', 'percent') %}
+        <input type="text" inputmode="decimal" name="{{ f.name }}" value="{{ val }}"
+               placeholder="{{ '0' if f.type != 'percent' else 'vd 8' }}">
+      {% else %}
+        <input type="text" name="{{ f.name }}" value="{{ val }}"
+               {{ 'required' if f.required }}>
+      {% endif %}
+    </label>
+    {% endfor %}
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">💾 Lưu</button>
+    <a class="btn ghost" href="/{{ slug }}">Huỷ</a>
+  </div>
+</form>
+{% endblock %}

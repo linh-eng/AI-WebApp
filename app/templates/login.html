@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập - Báo cáo Kinh doanh THNG</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="login-page">
+  <form class="login-box" method="post" action="/login">
+    <div class="brand center">THNG<span>Báo cáo Kinh doanh</span></div>
+    {% if loi %}<div class="alert">Sai tài khoản hoặc mật khẩu.</div>{% endif %}
+    <label>Tài khoản
+      <input type="text" name="username" autofocus required>
+    </label>
+    <label>Mật khẩu
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit">Đăng nhập</button>
+    <p class="hint">Mặc định: admin / admin123 (đổi ngay sau khi cài đặt)</p>
+  </form>
+</body>
+</html>
