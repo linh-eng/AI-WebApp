@@ -1,5 +1,6 @@
 """Cấu hình ứng dụng - đọc từ biến môi trường, có giá trị mặc định để chạy ngay."""
 import os
+import secrets
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,8 +10,22 @@ DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'thng.db'}")
 
-# Khoá ký cookie phiên đăng nhập. BẮT BUỘC đổi khi chạy thật (biến SECRET_KEY).
-SECRET_KEY = os.getenv("SECRET_KEY", "thay-doi-khoa-nay-khi-chay-that-1234567890")
+
+def _secret_key() -> str:
+    """Khoá ký cookie đăng nhập. Ưu tiên biến SECRET_KEY; nếu không có thì tự sinh
+    một khoá ngẫu nhiên và lưu lại (mỗi lần cài đặt có khoá riêng, ổn định)."""
+    env = os.getenv("SECRET_KEY")
+    if env:
+        return env
+    f = DATA_DIR / "secret.key"
+    if f.exists():
+        return f.read_text().strip()
+    val = secrets.token_hex(32)
+    f.write_text(val)
+    return val
+
+
+SECRET_KEY = _secret_key()
 
 # File Excel mẫu dùng làm template khi xuất báo cáo.
 TEMPLATE_XLSX = Path(
