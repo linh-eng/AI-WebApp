@@ -725,6 +725,36 @@ def chon_ncc(ma_yc: str, ma_bao_gia: str, request: Request, db: Session = Depend
     return RedirectResponse(f"/check-gia/{ma_yc}/bao-gia", status_code=303)
 
 
+# ---- Xuất PDF Đơn đặt hàng / Hợp đồng (PO) ------------------------------
+
+@app.get("/po/{ma_po}/pdf")
+def po_pdf(ma_po: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    po = db.scalar(select(models.PO).where(models.PO.ma_po == ma_po))
+    if not po:
+        return RedirectResponse("/po", status_code=303)
+    ncc = db.scalar(select(models.NhaCungCap).where(models.NhaCungCap.ma_ncc == po.ma_ncc))
+    pr = db.scalar(select(models.PR).where(models.PR.ma_pr == po.ma_pr))
+    cg = db.scalar(select(models.CheckGia).where(
+        models.CheckGia.ma_yc == pr.ma_yc)) if pr else None
+    du_an = db.scalar(select(models.DuAn).where(
+        models.DuAn.ma_du_an == cg.ma_du_an)) if cg else None
+    ncc_index = {ncc.ma_ncc: ncc} if ncc else {}
+    tt = {
+        "hang_muc": cg.hang_muc if cg else "",
+        "dvt": cg.dvt if cg else "",
+        "ten_du_an": du_an.ten if du_an else (cg.ma_du_an if cg else ""),
+        "dieu_khoan_tt": ncc.dieu_khoan_tt if ncc else 0,
+        "han_thanh_toan": calculations.po_han_thanh_toan(po, ncc_index),
+    }
+    from . import pdf_export
+    data = pdf_export.xuat_pdf_po(po, ncc, tt)
+    return Response(content=data, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="PO_{ma_po}.pdf"'})
+
+
 # ---- Thống kê NCC / dự án / báo cáo tháng -------------------------------
 
 @app.get("/thong-ke-ncc", response_class=HTMLResponse)

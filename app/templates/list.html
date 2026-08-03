@@ -61,6 +61,7 @@
         {% for c in row.cells %}<td class="{{ 'col-tinh' if loop.index0 >= n_manual }}">{{ c }}</td>{% endfor %}
         <td class="actions">
           {% if slug == 'check-gia' %}<a href="/check-gia/{{ row.pk }}/bao-gia">So sánh BG</a>{% endif %}
+          {% if slug == 'po' %}<a href="/po/{{ row.pk }}/pdf" target="_blank">PDF</a>{% endif %}
           <a href="/{{ slug }}/sua/{{ row.pk }}">Sửa</a>
           {% if can_delete(user) %}
           <form method="post" action="/{{ slug }}/xoa/{{ row.pk }}"
