@@ -27,6 +27,10 @@ def _secret_key() -> str:
 
 SECRET_KEY = _secret_key()
 
+# Tên cookie phiên đăng nhập - PHẢI KHÁC app khác chạy cùng máy/tên miền,
+# nếu không 2 app sẽ đè cookie của nhau (đăng nhập app này đá app kia ra).
+COOKIE_NAME = os.getenv("COOKIE_NAME", "thng_kinhdoanh_session")
+
 # File Excel mẫu dùng làm template khi xuất báo cáo.
 TEMPLATE_XLSX = Path(
     os.getenv(

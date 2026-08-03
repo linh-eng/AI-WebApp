@@ -16,7 +16,7 @@ from fastapi import Header
 
 from . import (calculations, charts, connectors, excel_export, importer, models,
                web_meta)
-from .config import API_TOKEN, BASE_DIR, SECRET_KEY, TU_DONG_CHOT
+from .config import API_TOKEN, BASE_DIR, COOKIE_NAME, SECRET_KEY, TU_DONG_CHOT
 from .database import Base, SessionLocal, engine, get_db, tu_bo_sung_cot
 from .security import hash_password, verify_password
 from .seed import khoi_tao_du_lieu
@@ -33,7 +33,8 @@ def _is_admin(user) -> bool:
     return user.vai_tro == "admin"
 
 app = FastAPI(title="WebApp Báo cáo Kinh doanh THNG")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=8 * 3600)
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY,
+                   session_cookie=COOKIE_NAME, max_age=8 * 3600)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
