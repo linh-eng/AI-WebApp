@@ -55,18 +55,17 @@ def so_ngay_tre(hd: models.HopDong, today: date | None = None) -> int:
 
 def han_thanh_toan(
     hd: models.HopDong,
-    bg_index: dict[str, models.BaoGia],
-    kh_index: dict[str, models.KhachHang],
+    bg_index: dict[str, models.BaoGia] | None = None,
+    kh_index: dict[str, models.KhachHang] | None = None,
 ) -> date | None:
-    """Hạn thanh toán = Ngày giao thực tế + Điều khoản TT (số ngày) của KH."""
-    if not hd.ma_po or hd.ngay_giao_thuc_te is None:
-        return None
-    ma_kh = ma_kh_cua_po(hd, bg_index)
-    kh = kh_index.get(ma_kh)
-    ngay_dieu_khoan = kh.dieu_khoan_tt if kh else 0
+    """Hạn thanh toán = (Ngày hóa đơn nếu có, ngược lại Ngày giao thực tế)
+    + Công nợ (số ngày) của chính Hợp đồng đó."""
     from datetime import timedelta
 
-    return hd.ngay_giao_thuc_te + timedelta(days=ngay_dieu_khoan)
+    base = hd.ngay_hoa_don or hd.ngay_giao_thuc_te
+    if not hd.ma_po or base is None:
+        return None
+    return base + timedelta(days=(hd.cong_no_ngay or 0))
 
 
 def ma_kh_cua_po(hd: models.HopDong, bg_index: dict[str, models.BaoGia]) -> str:

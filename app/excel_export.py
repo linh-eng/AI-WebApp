@@ -21,17 +21,20 @@ DATA_START_ROW = 4
 COT_KHACH_HANG = {
     "ma_kh": 1, "ten": 2, "nguoi_lien_he": 3, "lien_he": 4,
     "dieu_khoan_tt": 5, "han_muc_cong_no": 6, "ghi_chu": 7,
+    "ma_so_thue": 8, "dia_chi": 9,
 }
 COT_BAO_GIA = {
     "ma_bao_gia": 1, "ngay": 2, "ma_kh": 3, "noi_dung": 5, "gia_truoc_vat": 6,
     "vat": 7, "hieu_luc_den": 9, "trang_thai": 10, "ma_po": 11,
-    "nv_phu_trach": 12, "ghi_chu": 15,
+    "nv_phu_trach": 12, "ghi_chu": 15, "ngay_chot_don": 16,
 }
+# Cột 20 (Mô tả HH) và 23 (VAT) ở Hợp đồng là CÔNG THỨC lấy từ Báo giá -> không ghi.
 COT_HOP_DONG = {
     "ma_po": 1, "ngay_nhan_po": 2, "ma_bao_gia": 3, "so_hop_dong": 6,
     "ngay_ky": 7, "gia_tri_hop_dong": 8, "ngay_giao_cam_ket": 10,
     "ngay_giao_thuc_te": 11, "tinh_trang_chat_luong": 14, "ty_le_hang_loi": 15,
-    "ghi_chu": 19,
+    "ghi_chu": 19, "so_luong": 21, "don_gia": 22, "ngay_du_kien_hang_ve": 24,
+    "ngay_hoa_don": 25, "cong_no_ngay": 26,
 }
 COT_THANH_TOAN = {
     "ma_phieu_thu": 1, "ngay_thu": 2, "ma_po": 3, "so_tien_thu": 5,

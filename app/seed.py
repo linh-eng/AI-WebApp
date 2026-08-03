@@ -26,20 +26,24 @@ def khoi_tao_du_lieu():
         # Dữ liệu mẫu (chỉ nạp khi CSDL còn trống)
         if db.scalar(select(func.count()).select_from(models.KhachHang)) == 0:
             db.add(models.KhachHang(
-                ma_kh="KH001", ten="Công ty TNHH ABC", nguoi_lien_he="Trần Thị B",
+                ma_kh="KH001", ten="Công ty TNHH ABC", ma_so_thue="0312345678",
+                dia_chi="123 Đường ABC, Q.1, TP.HCM", nguoi_lien_he="Trần Thị B",
                 lien_he="0901234567", dieu_khoan_tt=30, han_muc_cong_no=500_000_000,
                 ghi_chu="Khách hàng mẫu"))
             db.add(models.BaoGia(
                 ma_bao_gia="BG2026-001", ngay=date(2026, 1, 5), ma_kh="KH001",
                 noi_dung="Cung cấp vật tư theo YCKH", gia_truoc_vat=250_000_000,
                 vat=0.08, hieu_luc_den=date(2026, 2, 5), trang_thai="Thắng",
-                ma_po="PO2026-001", nv_phu_trach="Nguyễn Văn A"))
+                ma_po="PO2026-001", ngay_chot_don=date(2026, 1, 15),
+                nv_phu_trach="Nguyễn Văn A"))
             db.add(models.HopDong(
                 ma_po="PO2026-001", ngay_nhan_po=date(2026, 1, 10),
                 ma_bao_gia="BG2026-001", so_hop_dong="HĐ01/2026",
                 ngay_ky=date(2026, 1, 12), gia_tri_hop_dong=270_000_000,
+                so_luong=100, don_gia=2_700_000,
                 ngay_giao_cam_ket=date(2026, 2, 15),
                 ngay_giao_thuc_te=date(2026, 2, 14),
+                ngay_hoa_don=date(2026, 2, 16), cong_no_ngay=30,
                 tinh_trang_chat_luong="Đạt", ty_le_hang_loi=0))
             db.add(models.ThanhToan(
                 ma_phieu_thu="PT2026-001", ngay_thu=date(2026, 1, 20),

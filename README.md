@@ -32,6 +32,16 @@ Quy trình nghiệp vụ: **Báo giá → PO/Hợp đồng → Tiến độ & Ch
 - **Chốt & lưu báo cáo định kỳ**: nút chốt báo cáo thủ công + **tự động chốt mỗi
   tháng**; trang lưu trữ tải lại file Excel bất kỳ lúc nào.
 
+**Bổ sung theo yêu cầu nghiệp vụ**
+- **Khách hàng**: thêm Mã số thuế, Địa chỉ.
+- **Báo giá**: thêm **Ngày chốt đơn** — "Giá trị thắng" trong Báo cáo tháng tính theo
+  tháng chốt đơn (không theo tháng phát hành báo giá), tránh lệch số bán hàng theo tháng.
+- **Hợp đồng**: thêm Mô tả hàng hóa & VAT (**tự lấy từ Báo giá** qua Mã báo giá),
+  Số lượng, Đơn giá, Ngày dự kiến hàng về, Ngày hóa đơn, **Công nợ (số ngày)**.
+  Hạn thanh toán = (Ngày hóa đơn hoặc Ngày giao thực tế) + Công nợ (số ngày) của HĐ.
+- File Excel mẫu được cập nhật đồng bộ: cột mới + công thức liên kết Hợp đồng↔Báo giá,
+  Báo cáo tháng tính "Giá trị thắng" theo Ngày chốt đơn.
+
 **Giai đoạn 4 (mở rộng)**
 - **Nhắc nợ & cảnh báo tự động** — trang **Cần xử lý** + số cảnh báo trên menu:
   công nợ quá hạn, báo giá sắp/đã hết hiệu lực, PO trễ giao hàng.

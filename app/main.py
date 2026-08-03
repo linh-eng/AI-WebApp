@@ -17,7 +17,7 @@ from fastapi import Header
 from . import (calculations, charts, connectors, excel_export, importer, models,
                web_meta)
 from .config import API_TOKEN, BASE_DIR, SECRET_KEY, TU_DONG_CHOT
-from .database import Base, SessionLocal, engine, get_db
+from .database import Base, SessionLocal, engine, get_db, tu_bo_sung_cot
 from .security import hash_password, verify_password
 from .seed import khoi_tao_du_lieu
 
@@ -41,6 +41,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 @app.on_event("startup")
 def _startup():
     Base.metadata.create_all(bind=engine)
+    tu_bo_sung_cot()
     khoi_tao_du_lieu()
     if TU_DONG_CHOT:
         import threading
@@ -410,6 +411,24 @@ def _display_value(field: dict, value):
     if t == "date":
         return _ngay(value)
     return value
+
+
+def _bao_gia_index(db: Session) -> dict:
+    return {b.ma_bao_gia: b for b in db.scalars(select(models.BaoGia)).all()}
+
+
+def _field_raw(rec, field: dict, bg_index: dict):
+    """Lấy giá trị của một trường; trường 'derived' được tính từ Báo giá liên kết."""
+    d = field.get("derived")
+    if d:
+        src, attr = d.split(":")
+        if src == "bao_gia":
+            bg = bg_index.get(getattr(rec, "ma_bao_gia", "") or "")
+            if bg is None:
+                return 0 if field["type"] == "percent" else ""
+            return getattr(bg, attr)
+        return ""
+    return getattr(rec, field["name"])
 
 
 # ---- Helper: upsert danh sách bản ghi (dùng cho nhập file & đồng bộ URL) --
@@ -846,9 +865,10 @@ def list_view(slug: str, request: Request, nam: int | None = None,
     if kh_attr and ma_kh:
         records = [r for r in records if getattr(r, kh_attr) == ma_kh]
 
+    bg_index = _bao_gia_index(db) if any(f.get("derived") for f in fields) else {}
     rows = []
     for rec in records:
-        cells = [_display_value(f, getattr(rec, f["name"])) for f in fields]
+        cells = [_display_value(f, _field_raw(rec, f, bg_index)) for f in fields]
         rows.append({"pk": getattr(rec, ent["pk"]), "cells": cells})
 
     return templates.TemplateResponse(request, "list.html", {
@@ -887,10 +907,11 @@ def edit_form(slug: str, pk: str, request: Request, db: Session = Depends(get_db
     obj = db.scalar(select(ent["model"]).where(getattr(ent["model"], ent["pk"]) == pk))
     if not obj:
         return RedirectResponse(f"/{slug}", status_code=303)
+    bg_index = _bao_gia_index(db)
     values = {}
     for f in ent["fields"]:
-        v = getattr(obj, f["name"])
-        if f["type"] == "percent" and v is not None:
+        v = _field_raw(obj, f, bg_index)
+        if f["type"] == "percent" and v not in (None, ""):
             v = round(v * 100, 4)
         elif f["type"] == "date" and v is not None:
             v = v.strftime("%Y-%m-%d")
@@ -924,6 +945,8 @@ async def save(slug: str, request: Request, db: Session = Depends(get_db)):
         db.add(obj)
 
     for f in ent["fields"]:
+        if f.get("derived"):
+            continue  # trường tự lấy từ Báo giá - không lưu
         setattr(obj, f["name"], _parse_value(f, form.get(f["name"], "")))
 
     try:

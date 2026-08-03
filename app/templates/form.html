@@ -17,9 +17,12 @@
   <div class="form-grid">
     {% for f in fields %}
     <label class="{{ 'req' if f.required }}">
-      <span>{{ f.label }}</span>
+      <span>{{ f.label }}{% if f.derived %} <em class="auto">(tự lấy từ Báo giá)</em>{% endif %}</span>
       {% set val = obj[f.name] if obj else '' %}
-      {% if f.type == 'select' %}
+      {% if f.derived %}
+        <input type="text" value="{% if f.type == 'percent' and val not in (None, '') %}{{ val }}%{% else %}{{ val }}{% endif %}"
+               disabled placeholder="chọn Mã báo giá rồi lưu">
+      {% elif f.type == 'select' %}
         <select name="{{ f.name }}">
           <option value="">-- chọn --</option>
           {% for opt in f.options %}

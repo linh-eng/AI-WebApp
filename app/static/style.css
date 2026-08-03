@@ -63,6 +63,8 @@ td.actions form{display:inline}
 .entity-form input,.entity-form select{padding:9px 11px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;font-family:inherit}
 .entity-form input:focus,.entity-form select:focus{outline:2px solid #bcdcff;border-color:var(--brand)}
 .form-actions{margin-top:22px;display:flex;gap:12px}
+.entity-form input:disabled{background:#eef3f9;color:#475569;cursor:not-allowed}
+.entity-form .auto{font-style:italic;color:#0d5ba5;font-weight:400;font-size:11px}
 
 /* ---- Login ---- */
 .login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--brand-d)}

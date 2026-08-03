@@ -36,6 +36,8 @@ class KhachHang(Base):
     lien_he: Mapped[str] = mapped_column(String(120), default="")  # ĐT/Email
     dieu_khoan_tt: Mapped[int] = mapped_column(Integer, default=0)  # số ngày
     han_muc_cong_no: Mapped[float] = mapped_column(Float, default=0)
+    ma_so_thue: Mapped[str] = mapped_column(String(30), default="")
+    dia_chi: Mapped[str] = mapped_column(String(300), default="")
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
@@ -53,6 +55,7 @@ class BaoGia(Base):
     hieu_luc_den: Mapped[date | None] = mapped_column(Date, nullable=True)
     trang_thai: Mapped[str] = mapped_column(String(20), default="Đang chào")
     ma_po: Mapped[str] = mapped_column(String(40), default="")  # điền khi thắng
+    ngay_chot_don: Mapped[date | None] = mapped_column(Date, nullable=True)  # ngày thắng/chốt
     nv_phu_trach: Mapped[str] = mapped_column(String(120), default="")
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
@@ -72,6 +75,12 @@ class HopDong(Base):
     ngay_giao_thuc_te: Mapped[date | None] = mapped_column(Date, nullable=True)
     tinh_trang_chat_luong: Mapped[str] = mapped_column(String(20), default="")  # Đạt/Lỗi
     ty_le_hang_loi: Mapped[float] = mapped_column(Float, default=0)
+    # Bổ sung: chi tiết hàng hóa & chứng từ (Mô tả HH và VAT tự lấy từ Báo giá)
+    so_luong: Mapped[float] = mapped_column(Float, default=0)
+    don_gia: Mapped[float] = mapped_column(Float, default=0)
+    ngay_du_kien_hang_ve: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ngay_hoa_don: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cong_no_ngay: Mapped[int] = mapped_column(Integer, default=0)  # số ngày công nợ của PO
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
