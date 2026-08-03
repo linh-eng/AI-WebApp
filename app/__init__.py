@@ -1,1 +1,1 @@
-"""WebApp Báo cáo Kinh doanh THNG."""
+"""WebApp Báo cáo Mua hàng THNG."""

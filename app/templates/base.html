@@ -3,24 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Báo cáo Kinh doanh THNG{% endblock %}</title>
+  <title>{% block title %}Báo cáo Mua hàng THNG{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar">
-    <div class="brand">THNG<span>Báo cáo Kinh doanh</span></div>
+    <div class="brand">THNG<span>Báo cáo Mua hàng</span></div>
     <nav>
       <a href="/" class="{{ 'on' if active=='dashboard' }}">📊 Tổng quan</a>
       {% set n_cb = so_canh_bao() %}
       <a href="/can-xu-ly" class="{{ 'on' if active=='can-xu-ly' }}">⚠️ Cần xử lý
         {% if n_cb %}<span class="badge">{{ n_cb }}</span>{% endif %}</a>
-      <a href="/khach-hang" class="{{ 'on' if active=='khach-hang' }}">👥 Khách hàng</a>
-      <a href="/san-pham" class="{{ 'on' if active=='san-pham' }}">📦 Sản phẩm</a>
-      <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá</a>
-      <a href="/hop-dong" class="{{ 'on' if active=='hop-dong' }}">📄 Hợp đồng / PO</a>
+      <div class="nav-group">Danh mục</div>
+      <a href="/du-an" class="{{ 'on' if active=='du-an' }}">🏗️ Dự án</a>
+      <a href="/nha-cung-cap" class="{{ 'on' if active=='nha-cung-cap' }}">🏭 Nhà cung cấp</a>
+      <div class="nav-group">Quy trình 1 · Check giá</div>
+      <a href="/check-gia" class="{{ 'on' if active=='check-gia' }}">🔍 Check giá</a>
+      <a href="/bao-gia" class="{{ 'on' if active=='bao-gia' }}">📝 Báo giá NCC</a>
+      <div class="nav-group">Quy trình 2 · PR – PO</div>
+      <a href="/pr" class="{{ 'on' if active=='pr' }}">📋 PR (Đề nghị mua)</a>
+      <a href="/po" class="{{ 'on' if active=='po' }}">📄 PO / Hợp đồng</a>
+      <div class="nav-group">Quy trình 3 · Thanh toán</div>
       <a href="/thanh-toan" class="{{ 'on' if active=='thanh-toan' }}">💰 Thanh toán</a>
-      <a href="/muc-tieu" class="{{ 'on' if active=='muc-tieu' }}">🎯 Mục tiêu doanh số</a>
+      <a href="/cong-no" class="{{ 'on' if active=='cong-no' }}">📕 Công nợ phải trả</a>
+      <div class="nav-group">Báo cáo</div>
       <a href="/bao-cao-luu" class="{{ 'on' if active=='bao-cao-luu' }}">🗂️ Báo cáo đã lưu</a>
       {% if is_admin(user) %}
       <a href="/nguoi-dung" class="{{ 'on' if active=='nguoi-dung' }}">🔑 Người dùng</a>

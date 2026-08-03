@@ -1,94 +1,151 @@
-"""Tái hiện các công thức tự động của file mẫu THNG.
+"""Tái hiện các công thức tự động của file mẫu Báo cáo Mua hàng THNG.
 
-Mọi giá trị "chữ đen tự tính" trong Excel được tính ở đây để hiển thị trên web
-và để đối chiếu. Khi xuất Excel, ta chỉ điền ô nhập tay còn công thức trong file
-mẫu tự tính lại - nên logic ở đây phải khớp với công thức trong file mẫu.
+Mọi giá trị "tự tính" trong Excel được tính lại ở đây để hiển thị trên web và
+để đối chiếu. Khi xuất Excel, ta chỉ điền ô nhập tay; công thức trong file mẫu
+tự tính lại - nên logic ở đây phải khớp công thức file mẫu.
+
+Chuỗi liên kết dữ liệu:
+    Dự án ─┐
+           ├─ Check giá (YC) ──┬─ Báo giá (nhiều NCC, chọn 1)
+           │                   └─ PR ── PO ──┬─ Thanh toán
+    NCC ───┘                                 └─ Công nợ (động)
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterable
 
 from . import models
+from .config import NGUONG_HANG_LOI
+
+
+# ---- Chỉ mục tra cứu -----------------------------------------------------
+
+def _index(records, attr):
+    return {getattr(r, attr): r for r in records}
+
+
+# ---- Check giá -----------------------------------------------------------
+
+def cg_gia_tri_du_toan(cg: models.CheckGia) -> float:
+    return (cg.so_luong or 0) * (cg.don_gia_du_toan or 0)
+
+
+def cg_so_ngay_xu_ly(cg: models.CheckGia) -> int | None:
+    if cg.ngay_tra_gia and cg.ngay_nhan:
+        return (cg.ngay_tra_gia - cg.ngay_nhan).days
+    return None
+
+
+def cg_sla(cg: models.CheckGia, today: date | None = None) -> str:
+    """Khớp công thức 'Check giá'!O: Đúng hạn / Trả trễ / Đang xử lý / Quá hạn chưa trả."""
+    today = today or date.today()
+    if cg.han_tra_gia is None:
+        return ""
+    if cg.ngay_tra_gia is None:
+        return "Quá hạn chưa trả" if today > cg.han_tra_gia else "Đang xử lý"
+    return "Đúng hạn" if cg.ngay_tra_gia <= cg.han_tra_gia else "Trả trễ"
+
+
+def cg_bao_gia_duoc_chon(cg: models.CheckGia, bao_gias: Iterable[models.BaoGia]):
+    for b in bao_gias:
+        if b.ma_yc == cg.ma_yc and (b.duoc_chon or "").strip().lower() == "x":
+            return b
+    return None
+
+
+def cg_don_gia_chot(cg: models.CheckGia, bao_gias) -> float:
+    b = cg_bao_gia_duoc_chon(cg, bao_gias)
+    return (b.don_gia or 0) if b else 0
+
+
+def cg_gia_tri_chot(cg: models.CheckGia, bao_gias) -> float:
+    return cg_don_gia_chot(cg, bao_gias) * (cg.so_luong or 0)
+
+
+def cg_so_ncc_bao_gia(cg: models.CheckGia, bao_gias) -> int:
+    return sum(1 for b in bao_gias if b.ma_yc == cg.ma_yc)
 
 
 # ---- Báo giá -------------------------------------------------------------
 
-def gia_sau_vat(bg: models.BaoGia) -> float:
-    """Giá sau VAT = Giá trước VAT * (1 + VAT%)."""
-    return round((bg.gia_truoc_vat or 0) * (1 + (bg.vat or 0)))
+def bg_thanh_tien(bg: models.BaoGia, cg_index: dict) -> float:
+    cg = cg_index.get(bg.ma_yc)
+    so_luong = (cg.so_luong or 0) if cg else 0
+    return so_luong * (bg.don_gia or 0)
 
 
-def ten_khach_hang(ma_kh: str, kh_index: dict[str, models.KhachHang]) -> str:
-    kh = kh_index.get(ma_kh)
-    return kh.ten if kh else ""
+# ---- PR ------------------------------------------------------------------
+
+def pr_gia_tri_du_toan(pr: models.PR) -> float:
+    return (pr.so_luong or 0) * (pr.don_gia_du_toan or 0)
 
 
-# ---- Hợp đồng ------------------------------------------------------------
+# ---- PO ------------------------------------------------------------------
 
-def tinh_trang_tien_do(hd: models.HopDong, today: date | None = None) -> str:
-    """Đúng hạn / Giao trễ / Đang thực hiện / Trễ hạn / Chưa có kế hoạch."""
+def po_gia_tri(po: models.PO) -> float:
+    return (po.so_luong_dat or 0) * (po.don_gia_po or 0)
+
+
+def po_du_toan_pr(po: models.PO, pr_index: dict) -> float:
+    pr = pr_index.get(po.ma_pr)
+    return pr_gia_tri_du_toan(pr) if pr else 0
+
+
+def po_tiet_kiem(po: models.PO, pr_index: dict) -> float:
+    return po_du_toan_pr(po, pr_index) - po_gia_tri(po)
+
+
+def po_danh_gia_giao(po: models.PO, today: date | None = None) -> str:
+    """Khớp 'PO'!S: Đúng hạn / Giao trễ / Trễ hạn / Chưa đến hạn."""
     today = today or date.today()
-    if not hd.ma_po:
+    if po.ngay_giao_cam_ket is None:
         return ""
-    if hd.ngay_giao_thuc_te is None:
-        if hd.ngay_giao_cam_ket is None:
-            return "Chưa có kế hoạch"
-        return "Trễ hạn" if today > hd.ngay_giao_cam_ket else "Đang thực hiện"
-    if hd.ngay_giao_cam_ket is None:
-        return "Đúng hạn"
-    return "Đúng hạn" if hd.ngay_giao_thuc_te <= hd.ngay_giao_cam_ket else "Giao trễ"
+    if po.ngay_nhan_thuc_te is None:
+        return "Trễ hạn" if today > po.ngay_giao_cam_ket else "Chưa đến hạn"
+    return "Đúng hạn" if po.ngay_nhan_thuc_te <= po.ngay_giao_cam_ket else "Giao trễ"
 
 
-def so_ngay_tre(hd: models.HopDong, today: date | None = None) -> int:
+def po_so_ngay_tre(po: models.PO, today: date | None = None) -> int:
     today = today or date.today()
-    if not hd.ma_po:
+    if po.ngay_giao_cam_ket is None:
         return 0
-    if hd.ngay_giao_thuc_te is None:
-        if hd.ngay_giao_cam_ket is None:
-            return 0
-        return max(0, (today - hd.ngay_giao_cam_ket).days)
-    if hd.ngay_giao_cam_ket is None:
-        return 0
-    return max(0, (hd.ngay_giao_thuc_te - hd.ngay_giao_cam_ket).days)
+    if po.ngay_nhan_thuc_te is None:
+        return (today - po.ngay_giao_cam_ket).days if today > po.ngay_giao_cam_ket else 0
+    return max(0, (po.ngay_nhan_thuc_te - po.ngay_giao_cam_ket).days)
 
 
-def han_thanh_toan(
-    hd: models.HopDong,
-    bg_index: dict[str, models.BaoGia],
-    kh_index: dict[str, models.KhachHang],
-) -> date | None:
-    """Hạn thanh toán = Ngày giao thực tế + Điều khoản TT (số ngày) của KH."""
-    if not hd.ma_po or hd.ngay_giao_thuc_te is None:
+def po_ty_le_loi(po: models.PO) -> float:
+    return (po.sl_loi or 0) / (po.sl_nhan or 0) if (po.sl_nhan or 0) else 0
+
+
+def po_ket_qua_cl(po: models.PO) -> str:
+    """Khớp 'PO'!Y: Đạt nếu tỷ lệ lỗi <= ngưỡng, ngược lại Không đạt."""
+    if not (po.sl_nhan or 0):
+        return ""
+    return "Đạt" if po_ty_le_loi(po) <= NGUONG_HANG_LOI else "Không đạt"
+
+
+def po_dieu_khoan_tt(po: models.PO, ncc_index: dict) -> int:
+    ncc = ncc_index.get(po.ma_ncc)
+    return (ncc.dieu_khoan_tt or 0) if ncc else 0
+
+
+def po_han_thanh_toan(po: models.PO, ncc_index: dict) -> date | None:
+    if po.ngay_nhan_thuc_te is None:
         return None
-    ma_kh = ma_kh_cua_po(hd, bg_index)
-    kh = kh_index.get(ma_kh)
-    ngay_dieu_khoan = kh.dieu_khoan_tt if kh else 0
-    from datetime import timedelta
-
-    return hd.ngay_giao_thuc_te + timedelta(days=ngay_dieu_khoan)
+    return po.ngay_nhan_thuc_te + timedelta(days=po_dieu_khoan_tt(po, ncc_index))
 
 
-def ma_kh_cua_po(hd: models.HopDong, bg_index: dict[str, models.BaoGia]) -> str:
-    """Mã KH của hợp đồng lấy qua mã báo giá."""
-    bg = bg_index.get(hd.ma_bao_gia)
-    return bg.ma_kh if bg else ""
+# ---- Thanh toán / Công nợ ------------------------------------------------
+
+def da_tra_theo_po(ma_po: str, thanh_toans: Iterable[models.ThanhToan]) -> float:
+    return sum(t.so_tien or 0 for t in thanh_toans if t.ma_po == ma_po)
 
 
-def gia_tri_bao_gia_goc(hd: models.HopDong, bg_index: dict[str, models.BaoGia]) -> float:
-    bg = bg_index.get(hd.ma_bao_gia)
-    return gia_sau_vat(bg) if bg else 0
-
-
-# ---- Công nợ (tính theo từng PO) ----------------------------------------
-
-def da_thu_theo_po(ma_po: str, thanh_toans: Iterable[models.ThanhToan]) -> float:
-    return sum(tt.so_tien_thu or 0 for tt in thanh_toans if tt.ma_po == ma_po)
-
-
-def nhom_tuoi_no(con_phai_thu: float, so_ngay_qua_han: int) -> str:
-    if con_phai_thu <= 0:
-        return "Đã thu đủ"
+def nhom_tuoi_no(con_phai_tra: float, so_ngay_qua_han: int) -> str:
+    if con_phai_tra <= 0:
+        return "Đã thanh toán"
     if so_ngay_qua_han == 0:
         return "Trong hạn"
     if so_ngay_qua_han <= 30:
@@ -100,218 +157,224 @@ def nhom_tuoi_no(con_phai_thu: float, so_ngay_qua_han: int) -> str:
     return "Quá hạn trên 90 ngày"
 
 
-def cong_no_theo_po(
-    hd: models.HopDong,
-    thanh_toans: list[models.ThanhToan],
-    bg_index: dict[str, models.BaoGia],
-    kh_index: dict[str, models.KhachHang],
-    today: date | None = None,
-) -> dict:
-    """Trả về dòng công nợ của một PO, giống sheet 'Công nợ'."""
+def cong_no_theo_po(po: models.PO, thanh_toans, ncc_index, today: date | None = None) -> dict:
+    """Một dòng công nợ của 1 PO, khớp sheet 'Công nợ'."""
     today = today or date.today()
-    gia_tri = hd.gia_tri_hop_dong or 0
-    da_thu = da_thu_theo_po(hd.ma_po, thanh_toans)
-    con_phai_thu = gia_tri - da_thu
-    han = han_thanh_toan(hd, bg_index, kh_index)
-    if con_phai_thu <= 0 or han is None:
+    gia_tri = po_gia_tri(po)
+    da_tra = da_tra_theo_po(po.ma_po, thanh_toans)
+    con = gia_tri - da_tra
+    han = po_han_thanh_toan(po, ncc_index)
+    if con <= 0 or han is None:
         qua_han = 0
     else:
         qua_han = max(0, (today - han).days)
+    ncc = ncc_index.get(po.ma_ncc)
+    if con <= 0:
+        trang_thai = "Đã thanh toán đủ"
+    elif qua_han > 0:
+        trang_thai = "QUÁ HẠN"
+    else:
+        trang_thai = "Còn nợ, trong hạn"
     return {
-        "ma_po": hd.ma_po,
-        "khach_hang": ten_khach_hang(ma_kh_cua_po(hd, bg_index), kh_index),
-        "gia_tri_hop_dong": gia_tri,
-        "da_thu": da_thu,
-        "con_phai_thu": con_phai_thu,
+        "ma_po": po.ma_po,
+        "ma_ncc": po.ma_ncc,
+        "ten_ncc": ncc.ten if ncc else "",
+        "gia_tri_po": gia_tri,
+        "da_thanh_toan": da_tra,
+        "con_phai_tra": con,
         "han_thanh_toan": han,
         "so_ngay_qua_han": qua_han,
-        "nhom_tuoi_no": nhom_tuoi_no(con_phai_thu, qua_han),
-        "phan_tram_da_thu": (da_thu / gia_tri) if gia_tri else 0,
+        "nhom_tuoi_no": nhom_tuoi_no(con, qua_han),
+        "trang_thai": trang_thai,
     }
+
+
+def danh_sach_cong_no(pos, thanh_toans, nhas, today: date | None = None) -> list[dict]:
+    ncc_index = _index(nhas, "ma_ncc")
+    return [cong_no_theo_po(p, thanh_toans, ncc_index, today) for p in pos]
 
 
 # ---- Tổng quan (KPI dashboard) ------------------------------------------
 
-def tong_quan(
-    khachs: list[models.KhachHang],
-    bao_gias: list[models.BaoGia],
-    hop_dongs: list[models.HopDong],
-    thanh_toans: list[models.ThanhToan],
-    today: date | None = None,
-) -> dict:
+def tong_quan(du_ans, nhas, check_gias, bao_gias, prs, pos, thanh_toans,
+              today: date | None = None) -> dict:
+    """Toàn bộ KPI của sheet 'Tổng quan', chia 6 nhóm A-F."""
     today = today or date.today()
-    bg_index = {b.ma_bao_gia: b for b in bao_gias}
-    kh_index = {k.ma_kh: k for k in khachs}
+    cg_index = _index(check_gias, "ma_yc")
+    pr_index = _index(prs, "ma_pr")
+    ncc_index = _index(nhas, "ma_ncc")
 
-    so_bao_gia = len(bao_gias)
-    tong_gt_bao_gia = sum(gia_sau_vat(b) for b in bao_gias)
-    gt_thang = sum(gia_sau_vat(b) for b in bao_gias if b.trang_thai == "Thắng")
-    ty_le_thang = (gt_thang / tong_gt_bao_gia) if tong_gt_bao_gia else 0
+    # A. Tiếp nhận & xử lý yêu cầu check giá
+    so_yc = len(check_gias)
+    so_yc_da_tra = sum(1 for c in check_gias if (c.trang_thai or "") == "Đã trả giá")
+    slas = [cg_sla(c, today) for c in check_gias]
+    so_yc_dang_xu_ly = sum(1 for s in slas if s == "Đang xử lý")
+    so_yc_qua_han = sum(1 for s in slas if s == "Quá hạn chưa trả")
+    dung_han = sum(1 for s in slas if s == "Đúng hạn")
+    tra_tre = sum(1 for s in slas if s == "Trả trễ")
+    sla_dung_han = dung_han / (dung_han + tra_tre) if (dung_han + tra_tre) else 0
+    ngay_xl = [cg_so_ngay_xu_ly(c) for c in check_gias]
+    ngay_xl = [d for d in ngay_xl if d is not None]
+    tg_xu_ly_bq = sum(ngay_xl) / len(ngay_xl) if ngay_xl else 0
+    tong_du_toan_yc = sum(cg_gia_tri_du_toan(c) for c in check_gias)
+    tong_gia_chot = sum(cg_gia_tri_chot(c, bao_gias) for c in check_gias)
+    chenh_lech_chot = tong_gia_chot - tong_du_toan_yc
 
-    so_hd = len(hop_dongs)
-    tong_gt_hd = sum(h.gia_tri_hop_dong or 0 for h in hop_dongs)
+    # B. PR - PO - Hợp đồng
+    so_pr = len(prs)
+    so_pr_duyet = sum(1 for p in prs if (p.trang_thai_duyet or "") == "Đã duyệt")
+    tong_dutoan_pr = sum(pr_gia_tri_du_toan(p) for p in prs)
+    so_po = len(pos)
+    tong_gt_po = sum(po_gia_tri(p) for p in pos)
+    dutoan_pr_ra_po = sum(po_du_toan_pr(p, pr_index) for p in pos)
+    tiet_kiem = sum(po_tiet_kiem(p, pr_index) for p in pos)
+    ty_le_tiet_kiem = tiet_kiem / dutoan_pr_ra_po if dutoan_pr_ra_po else 0
 
-    cong_nos = [
-        cong_no_theo_po(h, thanh_toans, bg_index, kh_index, today) for h in hop_dongs
-    ]
-    da_thu = sum(c["da_thu"] for c in cong_nos)
-    con_phai_thu = sum(c["con_phai_thu"] for c in cong_nos)
-    no_qua_han = sum(
-        c["con_phai_thu"] for c in cong_nos if c["so_ngay_qua_han"] > 0
-    )
+    # C. Tiến độ giao hàng & chất lượng
+    danh_gia = [po_danh_gia_giao(p, today) for p in pos]
+    po_den_han = sum(1 for d in danh_gia if d in ("Đúng hạn", "Giao trễ", "Trễ hạn"))
+    po_dung_han = sum(1 for d in danh_gia if d == "Đúng hạn")
+    po_giao_tre = sum(1 for d in danh_gia if d == "Giao trễ")
+    po_tre_han = sum(1 for d in danh_gia if d == "Trễ hạn")
+    ty_le_giao_dung_han = po_dung_han / po_den_han if po_den_han else 0
+    kq_cl = [po_ket_qua_cl(p) for p in pos]
+    po_kiem_cl = sum(1 for k in kq_cl if k in ("Đạt", "Không đạt"))
+    po_dat = sum(1 for k in kq_cl if k == "Đạt")
+    ty_le_dat = po_dat / po_kiem_cl if po_kiem_cl else 0
+    tong_nhan = sum(p.sl_nhan or 0 for p in pos)
+    tong_loi = sum(p.sl_loi or 0 for p in pos)
+    ty_le_loi_bq = tong_loi / tong_nhan if tong_nhan else 0
 
-    po_tre_han = sum(
-        1 for h in hop_dongs if tinh_trang_tien_do(h, today) == "Trễ hạn"
-    )
-    po_loi = sum(1 for h in hop_dongs if h.tinh_trang_chat_luong == "Lỗi")
+    # D. Thanh toán & công nợ phải trả
+    cong_nos = [cong_no_theo_po(p, thanh_toans, ncc_index, today) for p in pos]
+    da_thanh_toan = sum(t.so_tien or 0 for t in thanh_toans)
+    con_phai_tra = sum(c["con_phai_tra"] for c in cong_nos)
+    no_qua_han = sum(c["con_phai_tra"] for c in cong_nos if c["so_ngay_qua_han"] > 0)
+    ty_le_no_qua_han = no_qua_han / con_phai_tra if con_phai_tra else 0
 
-    # tỷ lệ giao đúng hạn: trong các PO đã giao
-    da_giao = [h for h in hop_dongs if h.ngay_giao_thuc_te is not None]
-    dung_han = sum(
-        1 for h in da_giao if tinh_trang_tien_do(h, today) == "Đúng hạn"
-    )
-    ty_le_giao_dung_han = (dung_han / len(da_giao)) if da_giao else 0
+    # E. Tuổi nợ quá hạn (aging)
+    def _aging(lo, hi):
+        return sum(c["con_phai_tra"] for c in cong_nos
+                   if lo <= c["so_ngay_qua_han"] <= hi and c["con_phai_tra"] > 0)
+    no_1_30 = _aging(1, 30)
+    no_31_60 = _aging(31, 60)
+    no_61_90 = _aging(61, 90)
+    no_90 = sum(c["con_phai_tra"] for c in cong_nos
+                if c["so_ngay_qua_han"] > 90 and c["con_phai_tra"] > 0)
+    tong_qua_han = no_1_30 + no_31_60 + no_61_90 + no_90
+    no_trong_han = sum(c["con_phai_tra"] for c in cong_nos
+                       if c["so_ngay_qua_han"] == 0 and c["con_phai_tra"] > 0)
+
+    # F. Dự án
+    so_du_an = len(du_ans)
+    dang_thuc_hien = sum(1 for d in du_ans if (d.trang_thai or "") == "Đang thực hiện")
+    tong_ngan_sach = sum(d.ngan_sach or 0 for d in du_ans)
+    ty_le_su_dung = tong_gt_po / tong_ngan_sach if tong_ngan_sach else 0
+    ngan_sach_con_lai = tong_ngan_sach - tong_gt_po
 
     return {
         "nam": today.year,
-        "so_bao_gia": so_bao_gia,
-        "tong_gt_bao_gia": tong_gt_bao_gia,
-        "gt_thang": gt_thang,
-        "ty_le_thang": ty_le_thang,
-        "so_hop_dong": so_hd,
-        "tong_gt_hop_dong": tong_gt_hd,
-        "da_thu": da_thu,
-        "con_phai_thu": con_phai_thu,
-        "no_qua_han": no_qua_han,
-        "po_tre_han": po_tre_han,
-        "po_loi": po_loi,
+        # A
+        "so_yc": so_yc, "so_yc_da_tra": so_yc_da_tra,
+        "so_yc_dang_xu_ly": so_yc_dang_xu_ly, "so_yc_qua_han": so_yc_qua_han,
+        "sla_dung_han": sla_dung_han, "tg_xu_ly_bq": tg_xu_ly_bq,
+        "tong_du_toan_yc": tong_du_toan_yc, "tong_gia_chot": tong_gia_chot,
+        "chenh_lech_chot": chenh_lech_chot,
+        # B
+        "so_pr": so_pr, "so_pr_duyet": so_pr_duyet, "tong_dutoan_pr": tong_dutoan_pr,
+        "so_po": so_po, "tong_gt_po": tong_gt_po, "tiet_kiem": tiet_kiem,
+        "ty_le_tiet_kiem": ty_le_tiet_kiem,
+        # C
+        "po_den_han": po_den_han, "po_dung_han": po_dung_han,
+        "po_giao_tre": po_giao_tre, "po_tre_han": po_tre_han,
         "ty_le_giao_dung_han": ty_le_giao_dung_han,
-        "so_khach_hang": len(khachs),
+        "po_kiem_cl": po_kiem_cl, "po_dat": po_dat, "ty_le_dat": ty_le_dat,
+        "ty_le_loi_bq": ty_le_loi_bq,
+        # D
+        "da_thanh_toan": da_thanh_toan, "con_phai_tra": con_phai_tra,
+        "no_qua_han": no_qua_han, "ty_le_no_qua_han": ty_le_no_qua_han,
+        # E
+        "no_1_30": no_1_30, "no_31_60": no_31_60, "no_61_90": no_61_90, "no_90": no_90,
+        "tong_qua_han": tong_qua_han, "no_trong_han": no_trong_han,
+        # F
+        "so_du_an": so_du_an, "dang_thuc_hien": dang_thuc_hien,
+        "tong_ngan_sach": tong_ngan_sach, "ty_le_su_dung": ty_le_su_dung,
+        "ngan_sach_con_lai": ngan_sach_con_lai,
+        "so_ncc": len(nhas),
     }
 
 
-# ---- Dữ liệu cho biểu đồ (Giai đoạn 3) ----------------------------------
+# ---- Dữ liệu cho biểu đồ -------------------------------------------------
 
-def dien_bien_thang(hop_dongs, thanh_toans) -> list[dict]:
-    """Số liệu 12 tháng: giá trị HĐ ký & tiền thu (theo tháng của dữ liệu đã lọc)."""
+def dien_bien_thang(pos, thanh_toans) -> list[dict]:
+    """12 tháng: giá trị PO phát hành (theo Ngày PO) & tiền chi (theo Ngày TT)."""
     gt = [0.0] * 12
-    thu = [0.0] * 12
-    for h in hop_dongs:
-        if h.ngay_ky:
-            gt[h.ngay_ky.month - 1] += h.gia_tri_hop_dong or 0
+    chi = [0.0] * 12
+    for p in pos:
+        if p.ngay:
+            gt[p.ngay.month - 1] += po_gia_tri(p)
     for t in thanh_toans:
-        if t.ngay_thu:
-            thu[t.ngay_thu.month - 1] += t.so_tien_thu or 0
-    return [{"thang": m + 1, "gt_hd_ky": gt[m], "tien_thu": thu[m]} for m in range(12)]
+        if t.ngay:
+            chi[t.ngay.month - 1] += t.so_tien or 0
+    return [{"thang": m + 1, "gt_hd_ky": gt[m], "tien_thu": chi[m]} for m in range(12)]
 
 
-# Thứ tự nhóm tuổi nợ (từ nhẹ đến nặng), để vẽ biểu đồ công nợ
 NHOM_TUOI_NO = [
     "Trong hạn", "Quá hạn 1-30 ngày", "Quá hạn 31-60 ngày",
     "Quá hạn 61-90 ngày", "Quá hạn trên 90 ngày",
 ]
 
 
-def co_cau_tuoi_no(khachs, bao_gias, hop_dongs, thanh_toans,
-                   today: date | None = None) -> list[dict]:
-    """Tổng 'còn phải thu' theo từng nhóm tuổi nợ (bỏ nhóm đã thu đủ)."""
-    today = today or date.today()
-    bg_index = {b.ma_bao_gia: b for b in bao_gias}
-    kh_index = {k.ma_kh: k for k in khachs}
+def co_cau_tuoi_no(pos, thanh_toans, nhas, today: date | None = None) -> list[dict]:
+    """Tổng 'còn phải trả' theo từng nhóm tuổi nợ (bỏ nhóm đã thanh toán đủ)."""
+    ncc_index = _index(nhas, "ma_ncc")
     tong = {n: 0.0 for n in NHOM_TUOI_NO}
-    for h in hop_dongs:
-        c = cong_no_theo_po(h, thanh_toans, bg_index, kh_index, today)
-        nhom = c["nhom_tuoi_no"]
-        if nhom in tong:
-            tong[nhom] += c["con_phai_thu"]
+    for p in pos:
+        c = cong_no_theo_po(p, thanh_toans, ncc_index, today)
+        if c["nhom_tuoi_no"] in tong:
+            tong[c["nhom_tuoi_no"]] += c["con_phai_tra"]
     return [{"nhom": n, "so_tien": tong[n]} for n in NHOM_TUOI_NO]
 
 
-# ---- Nhắc nợ & cảnh báo (Module mới) ------------------------------------
+# ---- Nhắc việc & cảnh báo (Cần xử lý) -----------------------------------
 
-def canh_bao(khachs, bao_gias, hop_dongs, thanh_toans,
-             today: date | None = None, so_ngay_bao_gia: int = 7) -> dict:
-    """Tổng hợp việc cần xử lý: công nợ quá hạn, báo giá sắp/đã hết hiệu lực, PO trễ."""
-    from datetime import timedelta
-
+def canh_bao(du_ans, nhas, check_gias, bao_gias, prs, pos, thanh_toans,
+             today: date | None = None) -> dict:
+    """Việc cần xử lý: nợ NCC quá hạn, YC quá hạn chưa trả giá, PO trễ giao."""
     today = today or date.today()
-    bg_index = {b.ma_bao_gia: b for b in bao_gias}
-    kh_index = {k.ma_kh: k for k in khachs}
+    ncc_index = _index(nhas, "ma_ncc")
 
     no_qua_han = []
-    for h in hop_dongs:
-        c = cong_no_theo_po(h, thanh_toans, bg_index, kh_index, today)
-        if c["con_phai_thu"] > 0 and c["so_ngay_qua_han"] > 0:
+    for p in pos:
+        c = cong_no_theo_po(p, thanh_toans, ncc_index, today)
+        if c["con_phai_tra"] > 0 and c["so_ngay_qua_han"] > 0:
             no_qua_han.append(c)
     no_qua_han.sort(key=lambda c: c["so_ngay_qua_han"], reverse=True)
 
-    bao_gia_sap_het = []
-    for b in bao_gias:
-        if b.trang_thai == "Đang chào" and b.hieu_luc_den:
-            con = (b.hieu_luc_den - today).days
-            if con <= so_ngay_bao_gia:  # sắp hết hoặc đã quá hạn
-                bao_gia_sap_het.append({
-                    "ma_bao_gia": b.ma_bao_gia,
-                    "khach": ten_khach_hang(b.ma_kh, kh_index),
-                    "hieu_luc_den": b.hieu_luc_den,
-                    "con_ngay": con,
-                    "gia_tri": gia_sau_vat(b),
-                })
-    bao_gia_sap_het.sort(key=lambda x: x["con_ngay"])
+    yc_qua_han = []
+    for c in check_gias:
+        if cg_sla(c, today) == "Quá hạn chưa trả":
+            yc_qua_han.append({
+                "ma_yc": c.ma_yc, "hang_muc": c.hang_muc,
+                "han_tra_gia": c.han_tra_gia,
+                "so_ngay_tre": (today - c.han_tra_gia).days if c.han_tra_gia else 0,
+            })
+    yc_qua_han.sort(key=lambda x: x["so_ngay_tre"], reverse=True)
 
     po_tre = []
-    for h in hop_dongs:
-        if tinh_trang_tien_do(h, today) == "Trễ hạn":
+    for p in pos:
+        if po_danh_gia_giao(p, today) == "Trễ hạn":
+            ncc = ncc_index.get(p.ma_ncc)
             po_tre.append({
-                "ma_po": h.ma_po,
-                "khach": ten_khach_hang(ma_kh_cua_po(h, bg_index), kh_index),
-                "ngay_giao_cam_ket": h.ngay_giao_cam_ket,
-                "so_ngay_tre": so_ngay_tre(h, today),
+                "ma_po": p.ma_po, "ten_ncc": ncc.ten if ncc else "",
+                "ngay_giao_cam_ket": p.ngay_giao_cam_ket,
+                "so_ngay_tre": po_so_ngay_tre(p, today),
             })
     po_tre.sort(key=lambda x: x["so_ngay_tre"], reverse=True)
 
     return {
         "no_qua_han": no_qua_han,
-        "bao_gia_sap_het": bao_gia_sap_het,
+        "yc_qua_han": yc_qua_han,
         "po_tre": po_tre,
-        "tong": len(no_qua_han) + len(bao_gia_sap_het) + len(po_tre),
+        "tong": len(no_qua_han) + len(yc_qua_han) + len(po_tre),
     }
-
-
-# ---- Mục tiêu doanh số (KPI) --------------------------------------------
-
-def thuc_dat_theo_nv(bao_gias, hop_dongs, nam: int) -> dict:
-    """Doanh số thực đạt (giá trị HĐ ký) quy về NV phụ trách của báo giá gốc.
-
-    Trả về {nv: {0: cả_năm, 1..12: theo_tháng}} cho năm `nam`.
-    """
-    bg_index = {b.ma_bao_gia: b for b in bao_gias}
-    kq: dict[str, dict[int, float]] = {}
-    for h in hop_dongs:
-        if not h.ngay_ky or h.ngay_ky.year != nam:
-            continue
-        bg = bg_index.get(h.ma_bao_gia)
-        nv = (bg.nv_phu_trach if bg else "") or "(chưa gán)"
-        m = h.ngay_ky.month
-        d = kq.setdefault(nv, {i: 0.0 for i in range(13)})
-        d[m] += h.gia_tri_hop_dong or 0
-        d[0] += h.gia_tri_hop_dong or 0
-    return kq
-
-
-def bao_cao_muc_tieu(muc_tieus, bao_gias, hop_dongs, nam: int) -> list[dict]:
-    """Ghép mục tiêu với thực đạt, tính % hoàn thành."""
-    thuc_dat = thuc_dat_theo_nv(bao_gias, hop_dongs, nam)
-    rows = []
-    for mt in muc_tieus:
-        if mt.nam != nam:
-            continue
-        dat = thuc_dat.get(mt.nv, {}).get(mt.thang, 0.0)
-        rows.append({
-            "nv": mt.nv, "nam": mt.nam, "thang": mt.thang,
-            "chi_tieu": mt.chi_tieu, "thuc_dat": dat,
-            "phan_tram": (dat / mt.chi_tieu) if mt.chi_tieu else 0,
-            "id": mt.id,
-        })
-    rows.sort(key=lambda r: (r["nv"], r["thang"]))
-    return rows

@@ -125,3 +125,13 @@ code{background:#eef3f9;padding:1px 6px;border-radius:4px;font-size:13px}
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .form-grid{grid-template-columns:1fr}
 }
+
+/* Nhóm mục trong sidebar (phân theo quy trình) */
+.sidebar .nav-group{
+  margin:14px 0 4px; padding:0 4px; font-size:11px; font-weight:700;
+  letter-spacing:.03em; text-transform:uppercase; color:#94a3b8;
+}
+.row-danger{ background:#fef2f2; }
+.row-good{ background:#f0fdf4; }
+.group-title{ margin:22px 0 8px; font-size:15px; color:#334155;
+  border-left:4px solid #2a78d6; padding-left:8px; }

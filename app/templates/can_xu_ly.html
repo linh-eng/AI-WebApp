@@ -10,19 +10,19 @@
 {% endif %}
 
 {% if cb.no_qua_han %}
-<h3>💸 Công nợ quá hạn ({{ cb.no_qua_han|length }})</h3>
+<h3>💸 Công nợ NCC quá hạn ({{ cb.no_qua_han|length }})</h3>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Mã PO</th><th>Khách hàng</th><th>Còn phải thu</th>
+    <thead><tr><th>Mã PO</th><th>Nhà cung cấp</th><th>Còn phải trả</th>
       <th>Số ngày quá hạn</th><th>Nhóm</th><th></th></tr></thead>
     <tbody>
       {% for c in cb.no_qua_han %}
       <tr>
-        <td>{{ c.ma_po }}</td><td>{{ c.khach }}</td>
-        <td>{{ c.con_phai_thu|money }}</td>
+        <td>{{ c.ma_po }}</td><td>{{ c.ten_ncc }}</td>
+        <td>{{ c.con_phai_tra|money }}</td>
         <td class="danger"><b>{{ c.so_ngay_qua_han }}</b></td>
         <td>{{ c.nhom_tuoi_no }}</td>
-        <td><a href="/thanh-toan/them">Ghi thu tiền</a></td>
+        <td><a href="/thanh-toan/them">Ghi phiếu chi</a></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -30,21 +30,19 @@
 </div>
 {% endif %}
 
-{% if cb.bao_gia_sap_het %}
-<h3 style="margin-top:20px">⏳ Báo giá sắp/đã hết hiệu lực ({{ cb.bao_gia_sap_het|length }})</h3>
+{% if cb.yc_qua_han %}
+<h3 style="margin-top:20px">⏳ Yêu cầu check giá quá hạn chưa trả ({{ cb.yc_qua_han|length }})</h3>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Mã báo giá</th><th>Khách hàng</th><th>Giá trị</th>
-      <th>Hiệu lực đến</th><th>Còn lại</th><th></th></tr></thead>
+    <thead><tr><th>Mã YC</th><th>Hạng mục</th><th>Hạn trả giá</th>
+      <th>Số ngày trễ</th><th></th></tr></thead>
     <tbody>
-      {% for b in cb.bao_gia_sap_het %}
+      {% for y in cb.yc_qua_han %}
       <tr>
-        <td>{{ b.ma_bao_gia }}</td><td>{{ b.khach }}</td>
-        <td>{{ b.gia_tri|money }}</td><td>{{ b.hieu_luc_den|ngay }}</td>
-        <td class="{{ 'danger' if b.con_ngay < 0 }}">
-          {% if b.con_ngay < 0 %}Quá {{ -b.con_ngay }} ngày{% else %}Còn {{ b.con_ngay }} ngày{% endif %}
-        </td>
-        <td><a href="/bao-gia/sua/{{ b.ma_bao_gia }}">Cập nhật</a></td>
+        <td>{{ y.ma_yc }}</td><td>{{ y.hang_muc }}</td>
+        <td>{{ y.han_tra_gia|ngay }}</td>
+        <td class="danger"><b>{{ y.so_ngay_tre }}</b></td>
+        <td><a href="/check-gia/sua/{{ y.ma_yc }}">Cập nhật</a></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -56,15 +54,15 @@
 <h3 style="margin-top:20px">🚚 PO trễ giao hàng ({{ cb.po_tre|length }})</h3>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Mã PO</th><th>Khách hàng</th><th>Ngày giao cam kết</th>
+    <thead><tr><th>Mã PO</th><th>Nhà cung cấp</th><th>Ngày giao cam kết</th>
       <th>Số ngày trễ</th><th></th></tr></thead>
     <tbody>
       {% for p in cb.po_tre %}
       <tr>
-        <td>{{ p.ma_po }}</td><td>{{ p.khach }}</td>
+        <td>{{ p.ma_po }}</td><td>{{ p.ten_ncc }}</td>
         <td>{{ p.ngay_giao_cam_ket|ngay }}</td>
         <td class="danger"><b>{{ p.so_ngay_tre }}</b></td>
-        <td><a href="/hop-dong/sua/{{ p.ma_po }}">Cập nhật giao hàng</a></td>
+        <td><a href="/po/sua/{{ p.ma_po }}">Cập nhật giao hàng</a></td>
       </tr>
       {% endfor %}
     </tbody>

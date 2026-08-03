@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Tổng quan - THNG{% endblock %}
+{% block title %}Tổng quan Mua hàng - THNG{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>Tổng quan kinh doanh</h1>
+  <h1>Tổng quan mua hàng</h1>
   <div class="head-actions">
     <form method="get" action="/" class="inline-filter">
       <label>Năm
@@ -18,41 +18,76 @@
   </div>
 </div>
 
+<h3 class="group-title">A. Tiếp nhận &amp; xử lý yêu cầu check giá</h3>
 <div class="kpi-grid">
-  <div class="kpi"><span>Số báo giá phát hành</span><b>{{ tq.so_bao_gia }}</b></div>
-  <div class="kpi"><span>Tổng giá trị báo giá (VNĐ)</span><b>{{ tq.tong_gt_bao_gia|money }}</b></div>
-  <div class="kpi"><span>Giá trị báo giá thắng (VNĐ)</span><b>{{ tq.gt_thang|money }}</b></div>
-  <div class="kpi hl"><span>Tỷ lệ thắng thầu</span><b>{{ tq.ty_le_thang|percent }}</b></div>
+  <div class="kpi"><span>Số YC check giá</span><b>{{ tq.so_yc }}</b></div>
+  <div class="kpi"><span>Đã trả giá</span><b>{{ tq.so_yc_da_tra }}</b></div>
+  <div class="kpi warn"><span>Đang xử lý</span><b>{{ tq.so_yc_dang_xu_ly }}</b></div>
+  <div class="kpi danger"><span>Quá hạn chưa trả</span><b>{{ tq.so_yc_qua_han }}</b></div>
+  <div class="kpi hl"><span>SLA trả giá đúng hạn</span><b>{{ tq.sla_dung_han|percent }}</b></div>
+  <div class="kpi"><span>Tổng dự toán các YC</span><b>{{ tq.tong_du_toan_yc|money }}</b></div>
+  <div class="kpi"><span>Tổng giá chốt</span><b>{{ tq.tong_gia_chot|money }}</b></div>
+  <div class="kpi good"><span>Chênh lệch so dự toán</span><b>{{ tq.chenh_lech_chot|money }}</b></div>
+</div>
 
-  <div class="kpi"><span>Số hợp đồng / PO đã ký</span><b>{{ tq.so_hop_dong }}</b></div>
-  <div class="kpi"><span>Tổng giá trị hợp đồng (VNĐ)</span><b>{{ tq.tong_gt_hop_dong|money }}</b></div>
-  <div class="kpi hl"><span>Tỷ lệ giao hàng đúng hạn</span><b>{{ tq.ty_le_giao_dung_han|percent }}</b></div>
-  <div class="kpi"><span>Số khách hàng</span><b>{{ tq.so_khach_hang }}</b></div>
+<h3 class="group-title">B. PR – PO – Hợp đồng</h3>
+<div class="kpi-grid">
+  <div class="kpi"><span>Số PR</span><b>{{ tq.so_pr }}</b></div>
+  <div class="kpi"><span>PR đã duyệt</span><b>{{ tq.so_pr_duyet }}</b></div>
+  <div class="kpi"><span>Số PO phát hành</span><b>{{ tq.so_po }}</b></div>
+  <div class="kpi"><span>Tổng giá trị PO</span><b>{{ tq.tong_gt_po|money }}</b></div>
+  <div class="kpi good"><span>Tiết kiệm sau đàm phán</span><b>{{ tq.tiet_kiem|money }}</b></div>
+  <div class="kpi hl"><span>Tỷ lệ tiết kiệm</span><b>{{ tq.ty_le_tiet_kiem|percent }}</b></div>
+</div>
 
-  <div class="kpi good"><span>Đã thu (VNĐ)</span><b>{{ tq.da_thu|money }}</b></div>
-  <div class="kpi warn"><span>Còn phải thu (VNĐ)</span><b>{{ tq.con_phai_thu|money }}</b></div>
-  <div class="kpi danger"><span>Nợ QUÁ HẠN (VNĐ)</span><b>{{ tq.no_qua_han|money }}</b></div>
-  <div class="kpi danger"><span>Số PO trễ hạn</span><b>{{ tq.po_tre_han }}</b></div>
+<h3 class="group-title">C. Tiến độ giao hàng &amp; chất lượng</h3>
+<div class="kpi-grid">
+  <div class="kpi"><span>PO đã đến hạn giao</span><b>{{ tq.po_den_han }}</b></div>
+  <div class="kpi good"><span>Giao đúng hạn</span><b>{{ tq.po_dung_han }}</b></div>
+  <div class="kpi danger"><span>PO trễ hạn</span><b>{{ tq.po_tre_han }}</b></div>
+  <div class="kpi hl"><span>Tỷ lệ giao đúng hạn</span><b>{{ tq.ty_le_giao_dung_han|percent }}</b></div>
+  <div class="kpi"><span>PO đạt chất lượng</span><b>{{ tq.po_dat }}/{{ tq.po_kiem_cl }}</b></div>
+  <div class="kpi"><span>Tỷ lệ đạt chất lượng</span><b>{{ tq.ty_le_dat|percent }}</b></div>
+  <div class="kpi warn"><span>Tỷ lệ hàng lỗi bình quân</span><b>{{ tq.ty_le_loi_bq|percent }}</b></div>
+</div>
+
+<h3 class="group-title">D. Thanh toán &amp; công nợ phải trả</h3>
+<div class="kpi-grid">
+  <div class="kpi"><span>Tổng giá trị PO</span><b>{{ tq.tong_gt_po|money }}</b></div>
+  <div class="kpi good"><span>Đã thanh toán</span><b>{{ tq.da_thanh_toan|money }}</b></div>
+  <div class="kpi warn"><span>Còn phải trả</span><b>{{ tq.con_phai_tra|money }}</b></div>
+  <div class="kpi danger"><span>Nợ QUÁ HẠN</span><b>{{ tq.no_qua_han|money }}</b></div>
+  <div class="kpi"><span>Tỷ lệ nợ quá hạn</span><b>{{ tq.ty_le_no_qua_han|percent }}</b></div>
+</div>
+
+<h3 class="group-title">F. Ngân sách dự án</h3>
+<div class="kpi-grid">
+  <div class="kpi"><span>Số dự án</span><b>{{ tq.so_du_an }}</b></div>
+  <div class="kpi"><span>Đang thực hiện</span><b>{{ tq.dang_thuc_hien }}</b></div>
+  <div class="kpi"><span>Tổng ngân sách mua hàng</span><b>{{ tq.tong_ngan_sach|money }}</b></div>
+  <div class="kpi hl"><span>Tỷ lệ sử dụng ngân sách</span><b>{{ tq.ty_le_su_dung|percent }}</b></div>
+  <div class="kpi good"><span>Ngân sách còn lại</span><b>{{ tq.ngan_sach_con_lai|money }}</b></div>
+  <div class="kpi"><span>Số nhà cung cấp</span><b>{{ tq.so_ncc }}</b></div>
 </div>
 
 <div class="chart-grid">
   <div class="chart-card wide">
-    <h3>Diễn biến theo tháng</h3>
+    <h3>Diễn biến theo tháng (PO phát hành &amp; tiền chi NCC)</h3>
     {{ svg_thang|safe }}
   </div>
   <div class="chart-card">
     <h3>Tỷ lệ</h3>
     <div class="donut-row">
-      {{ svg_thang_thau|safe }}
+      {{ svg_tiet_kiem|safe }}
       {{ svg_dung_han|safe }}
     </div>
   </div>
   <div class="chart-card wide">
-    <h3>Cơ cấu công nợ theo tuổi nợ (còn phải thu)</h3>
+    <h3>Cơ cấu công nợ phải trả theo tuổi nợ</h3>
     {{ svg_no|safe }}
   </div>
 </div>
 
-<p class="muted">Quy trình: Báo giá → PO/Hợp đồng → Tiến độ &amp; Chất lượng → Thanh toán / Công nợ.
+<p class="muted">Quy trình: Check giá (Dự án → YC → Báo giá) → PR → PO → Thanh toán / Công nợ.
 Bấm <b>Xuất báo cáo Excel</b> để tải file đúng mẫu THNG (giữ nguyên định dạng &amp; công thức).</p>
 {% endblock %}

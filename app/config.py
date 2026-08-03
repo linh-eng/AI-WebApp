@@ -31,9 +31,12 @@ SECRET_KEY = _secret_key()
 TEMPLATE_XLSX = Path(
     os.getenv(
         "TEMPLATE_XLSX",
-        BASE_DIR / "docs" / "templates" / "Mau_bao_cao_kinh_doanh_THNG.xlsx",
+        BASE_DIR / "docs" / "templates" / "BaoCaoMuaHang_DuAn_THNG.xlsx",
     )
 )
+
+# Ngưỡng tỷ lệ hàng lỗi cho phép (khớp ô vàng "Tổng quan"!C8 của file mẫu).
+NGUONG_HANG_LOI = float(os.getenv("NGUONG_HANG_LOI", "0.02"))
 
 # Tài khoản admin khởi tạo lần đầu.
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")

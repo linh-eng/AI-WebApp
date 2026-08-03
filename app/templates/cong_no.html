@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Công nợ phải trả - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Công nợ phải trả nhà cung cấp</h1>
+  <div class="head-actions">
+    <form method="get" action="/cong-no" class="inline-filter">
+      <label>Năm
+        <select name="nam" onchange="this.form.submit()">
+          <option value="">Tất cả</option>
+          {% for n in cac_nam %}
+          <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi warn"><span>Tổng còn phải trả</span><b>{{ tong_con|money }}</b></div>
+  <div class="kpi danger"><span>Trong đó: nợ quá hạn</span><b>{{ tong_qua_han|money }}</b></div>
+</div>
+
+<p class="muted">Bảng này tính động 100% từ PO và Thanh toán (giống sheet <b>Công nợ</b> của file mẫu),
+không nhập tay. Muốn giảm nợ, hãy ghi thêm phiếu chi ở màn hình <b>Thanh toán</b>.</p>
+
+{% if rows %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Mã PO</th><th>Nhà cung cấp</th><th>Giá trị PO</th><th>Đã thanh toán</th>
+        <th>Còn phải trả</th><th>Hạn thanh toán</th><th>Quá hạn (ngày)</th>
+        <th>Nhóm tuổi nợ</th><th>Trạng thái</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="{{ 'row-danger' if r.so_ngay_qua_han > 0 else ('row-good' if r.con_phai_tra <= 0) }}">
+        <td>{{ r.ma_po }}</td>
+        <td>{{ r.ten_ncc }}</td>
+        <td>{{ r.gia_tri_po|money }}</td>
+        <td>{{ r.da_thanh_toan|money }}</td>
+        <td><b>{{ r.con_phai_tra|money }}</b></td>
+        <td>{{ r.han_thanh_toan|ngay }}</td>
+        <td class="{{ 'danger' if r.so_ngay_qua_han > 0 }}">{{ r.so_ngay_qua_han or '' }}</td>
+        <td>{{ r.nhom_tuoi_no }}</td>
+        <td>{{ r.trang_thai }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có PO nào để tính công nợ.</p>
+{% endif %}
+{% endblock %}

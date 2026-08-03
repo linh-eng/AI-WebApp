@@ -70,8 +70,8 @@ def bieu_do_thang(dien_bien: list[dict]) -> str:
         x1 = gx - bw - gap / 2
         x2 = gx + gap / 2
         for x, val, color, ten in (
-            (x1, d["gt_hd_ky"], SERIES1, "Giá trị HĐ ký"),
-            (x2, d["tien_thu"], SERIES2, "Tiền thu"),
+            (x1, d["gt_hd_ky"], SERIES1, "Giá trị PO"),
+            (x2, d["tien_thu"], SERIES2, "Tiền chi NCC"),
         ):
             h = plot_h * (val / vmax)
             yy = pad_t + plot_h - h
@@ -86,9 +86,9 @@ def bieu_do_thang(dien_bien: list[dict]) -> str:
     # Chú giải
     lx, ly = pad_l, 14
     parts.append(f'<rect x="{lx}" y="{ly-9}" width="11" height="11" rx="2" fill="{SERIES1}"/>')
-    parts.append(f'<text x="{lx+16}" y="{ly}" font-size="11" fill="{INK}">Giá trị HĐ ký</text>')
-    parts.append(f'<rect x="{lx+120}" y="{ly-9}" width="11" height="11" rx="2" fill="{SERIES2}"/>')
-    parts.append(f'<text x="{lx+136}" y="{ly}" font-size="11" fill="{INK}">Tiền thu</text>')
+    parts.append(f'<text x="{lx+16}" y="{ly}" font-size="11" fill="{INK}">Giá trị PO</text>')
+    parts.append(f'<rect x="{lx+110}" y="{ly-9}" width="11" height="11" rx="2" fill="{SERIES2}"/>')
+    parts.append(f'<text x="{lx+126}" y="{ly}" font-size="11" fill="{INK}">Tiền chi NCC</text>')
 
     parts.append("</svg>")
     return "".join(parts)

@@ -1,13 +1,17 @@
-"""Mô hình dữ liệu - khớp với các sheet nhập tay của file mẫu THNG.
+"""Mô hình dữ liệu - khớp với các sheet NHẬP TAY của file mẫu Báo cáo Mua hàng THNG.
 
-Quy trình: Báo giá -> PO/Hợp đồng -> Thanh toán -> Công nợ (tính động).
-Chỉ lưu dữ liệu NHẬP TAY; các giá trị công thức (tên KH, giá sau VAT, công nợ,
-tình trạng tiến độ...) được tính động ở tầng calculations.py.
+Quy trình:
+  1) Check giá:  Dự án -> Check giá (yêu cầu) -> Báo giá (so sánh NCC) -> chọn NCC
+  2) PR - PO:    PR (đề nghị mua) -> PO (đơn hàng/hợp đồng) -> tiến độ giao & chất lượng
+  3) Thanh toán: Thanh toán -> Công nợ phải trả (tính động)
+
+Chỉ lưu dữ liệu NHẬP TAY; các giá trị công thức (tên dự án, giá trị, tiết kiệm,
+công nợ, tuổi nợ...) được tính động ở tầng calculations.py và do file mẫu tự
+tính lại khi mở bằng Excel.
 """
 from datetime import date, datetime
 
-from sqlalchemy import (Boolean, Date, DateTime, Float, Integer, LargeBinary,
-                        String, Text)
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
@@ -25,114 +29,130 @@ class NguoiDung(Base):
     vai_tro: Mapped[str] = mapped_column(String(20), default="nhan_vien")
 
 
-class KhachHang(Base):
-    """Sheet 'Khách hàng' - toàn bộ nhập tay."""
-    __tablename__ = "khach_hang"
+class DuAn(Base):
+    """Sheet 'Dự án' - danh mục dự án (toàn bộ nhập tay)."""
+    __tablename__ = "du_an"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_kh: Mapped[str] = mapped_column(String(30), unique=True, index=True)
-    ten: Mapped[str] = mapped_column(String(200))
+    ma_du_an: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ten: Mapped[str] = mapped_column(String(250), default="")
+    khach_hang: Mapped[str] = mapped_column(String(200), default="")
+    pm: Mapped[str] = mapped_column(String(120), default="")
+    ngay_bat_dau: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ngay_ket_thuc: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ngan_sach: Mapped[float] = mapped_column(Float, default=0)
+    trang_thai: Mapped[str] = mapped_column(String(30), default="Đang thực hiện")
+    ghi_chu: Mapped[str] = mapped_column(String(300), default="")
+
+
+class NhaCungCap(Base):
+    """Sheet 'Nhà cung cấp' - toàn bộ nhập tay."""
+    __tablename__ = "nha_cung_cap"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ma_ncc: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ten: Mapped[str] = mapped_column(String(200), default="")
     nguoi_lien_he: Mapped[str] = mapped_column(String(120), default="")
-    lien_he: Mapped[str] = mapped_column(String(120), default="")  # ĐT/Email
+    dien_thoai: Mapped[str] = mapped_column(String(40), default="")
+    email: Mapped[str] = mapped_column(String(120), default="")
+    dia_chi: Mapped[str] = mapped_column(String(250), default="")
     dieu_khoan_tt: Mapped[int] = mapped_column(Integer, default=0)  # số ngày
-    han_muc_cong_no: Mapped[float] = mapped_column(Float, default=0)
+    danh_gia: Mapped[str] = mapped_column(String(10), default="")   # A/B/C
+    nhom_hang: Mapped[str] = mapped_column(String(200), default="")
+    ma_so_thue: Mapped[str] = mapped_column(String(30), default="")
+    ghi_chu: Mapped[str] = mapped_column(String(300), default="")
+
+
+class CheckGia(Base):
+    """Sheet 'Check giá' - yêu cầu tiếp nhận & xử lý giá (quy trình 1)."""
+    __tablename__ = "check_gia"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ma_yc: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ngay_nhan: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ma_du_an: Mapped[str] = mapped_column(String(30), default="")
+    nguoi_yc: Mapped[str] = mapped_column(String(150), default="")
+    hang_muc: Mapped[str] = mapped_column(String(300), default="")
+    dvt: Mapped[str] = mapped_column(String(30), default="")
+    so_luong: Mapped[float] = mapped_column(Float, default=0)
+    don_gia_du_toan: Mapped[float] = mapped_column(Float, default=0)
+    han_tra_gia: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ngay_tra_gia: Mapped[date | None] = mapped_column(Date, nullable=True)
+    trang_thai: Mapped[str] = mapped_column(String(30), default="")
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
 class BaoGia(Base):
-    """Sheet 'Báo giá'."""
+    """Sheet 'Báo giá' - mỗi dòng = 1 báo giá của 1 NCC cho 1 YC (quy trình 1)."""
     __tablename__ = "bao_gia"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_bao_gia: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    ma_bao_gia: Mapped[str] = mapped_column(String(30), unique=True, index=True)
     ngay: Mapped[date | None] = mapped_column(Date, nullable=True)
-    ma_kh: Mapped[str] = mapped_column(String(30), default="")
-    noi_dung: Mapped[str] = mapped_column(String(400), default="")
-    gia_truoc_vat: Mapped[float] = mapped_column(Float, default=0)
-    vat: Mapped[float] = mapped_column(Float, default=0.08)  # phân số, vd 0.08 = 8%
-    hieu_luc_den: Mapped[date | None] = mapped_column(Date, nullable=True)
-    trang_thai: Mapped[str] = mapped_column(String(20), default="Đang chào")
-    ma_po: Mapped[str] = mapped_column(String(40), default="")  # điền khi thắng
-    nv_phu_trach: Mapped[str] = mapped_column(String(120), default="")
+    ma_yc: Mapped[str] = mapped_column(String(30), default="")
+    ma_ncc: Mapped[str] = mapped_column(String(30), default="")
+    don_gia: Mapped[float] = mapped_column(Float, default=0)
+    thoi_gian_giao: Mapped[float] = mapped_column(Float, default=0)  # số ngày
+    hieu_luc: Mapped[date | None] = mapped_column(Date, nullable=True)
+    duoc_chon: Mapped[str] = mapped_column(String(5), default="")  # "x" nếu được chọn
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
-class HopDong(Base):
-    """Sheet 'Hợp đồng' - PO / Hợp đồng / Tiến độ / Chất lượng."""
-    __tablename__ = "hop_dong"
+class PR(Base):
+    """Sheet 'PR' - đề nghị mua hàng (quy trình 2)."""
+    __tablename__ = "pr"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_po: Mapped[str] = mapped_column(String(40), unique=True, index=True)
-    ngay_nhan_po: Mapped[date | None] = mapped_column(Date, nullable=True)
-    ma_bao_gia: Mapped[str] = mapped_column(String(40), default="")
-    so_hop_dong: Mapped[str] = mapped_column(String(60), default="")
+    ma_pr: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ngay: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ma_yc: Mapped[str] = mapped_column(String(30), default="")
+    so_luong: Mapped[float] = mapped_column(Float, default=0)
+    don_gia_du_toan: Mapped[float] = mapped_column(Float, default=0)
+    ngay_can_hang: Mapped[date | None] = mapped_column(Date, nullable=True)
+    trang_thai_duyet: Mapped[str] = mapped_column(String(30), default="")
+    nguoi_duyet: Mapped[str] = mapped_column(String(120), default="")
+    ngay_duyet: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ghi_chu: Mapped[str] = mapped_column(String(300), default="")
+
+
+class PO(Base):
+    """Sheet 'PO' - đơn mua hàng / hợp đồng + tiến độ giao & chất lượng (quy trình 2)."""
+    __tablename__ = "po"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ma_po: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ngay: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ma_pr: Mapped[str] = mapped_column(String(30), default="")
+    ma_ncc: Mapped[str] = mapped_column(String(30), default="")
+    so_luong_dat: Mapped[float] = mapped_column(Float, default=0)
+    don_gia_po: Mapped[float] = mapped_column(Float, default=0)
+    so_hop_dong: Mapped[str] = mapped_column(String(80), default="")
     ngay_ky: Mapped[date | None] = mapped_column(Date, nullable=True)
-    gia_tri_hop_dong: Mapped[float] = mapped_column(Float, default=0)
     ngay_giao_cam_ket: Mapped[date | None] = mapped_column(Date, nullable=True)
-    ngay_giao_thuc_te: Mapped[date | None] = mapped_column(Date, nullable=True)
-    tinh_trang_chat_luong: Mapped[str] = mapped_column(String(20), default="")  # Đạt/Lỗi
-    ty_le_hang_loi: Mapped[float] = mapped_column(Float, default=0)
+    ngay_nhan_thuc_te: Mapped[date | None] = mapped_column(Date, nullable=True)
+    sl_nhan: Mapped[float] = mapped_column(Float, default=0)
+    sl_loi: Mapped[float] = mapped_column(Float, default=0)
+    sl_tra_lai: Mapped[float] = mapped_column(Float, default=0)
     ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
 class ThanhToan(Base):
-    """Sheet 'Thanh toán' - sổ thu tiền (1 PO có thể thu nhiều đợt)."""
+    """Sheet 'Thanh toán' - sổ chi tiền cho NCC (1 PO có thể chi nhiều đợt)."""
     __tablename__ = "thanh_toan"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_phieu_thu: Mapped[str] = mapped_column(String(40), unique=True, index=True)
-    ngay_thu: Mapped[date | None] = mapped_column(Date, nullable=True)
-    ma_po: Mapped[str] = mapped_column(String(40), default="")
-    so_tien_thu: Mapped[float] = mapped_column(Float, default=0)
+    ma_phieu_chi: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    ngay: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ma_po: Mapped[str] = mapped_column(String(30), default="")
+    so_tien: Mapped[float] = mapped_column(Float, default=0)
+    dot: Mapped[float] = mapped_column(Float, default=0)
     hinh_thuc: Mapped[str] = mapped_column(String(60), default="")
-    dot_noi_dung: Mapped[str] = mapped_column(String(200), default="")
-
-
-class SanPham(Base):
-    """Danh mục sản phẩm / bảng giá."""
-    __tablename__ = "san_pham"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_sp: Mapped[str] = mapped_column(String(40), unique=True, index=True)
-    ten: Mapped[str] = mapped_column(String(200))
-    don_vi: Mapped[str] = mapped_column(String(30), default="")
-    don_gia: Mapped[float] = mapped_column(Float, default=0)
-    vat: Mapped[float] = mapped_column(Float, default=0.08)
-    mo_ta: Mapped[str] = mapped_column(String(300), default="")
-
-
-class BaoGiaDong(Base):
-    """Chi tiết dòng hàng của một báo giá (số lượng × đơn giá)."""
-    __tablename__ = "bao_gia_dong"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ma_bao_gia: Mapped[str] = mapped_column(String(40), index=True)
-    ma_sp: Mapped[str] = mapped_column(String(40), default="")
-    ten_hang: Mapped[str] = mapped_column(String(200), default="")
-    don_vi: Mapped[str] = mapped_column(String(30), default="")
-    so_luong: Mapped[float] = mapped_column(Float, default=0)
-    don_gia: Mapped[float] = mapped_column(Float, default=0)
-    ghi_chu: Mapped[str] = mapped_column(String(200), default="")
-
-
-class MucTieu(Base):
-    """Mục tiêu doanh số theo nhân viên và kỳ (tháng của 1 năm; thang=0 là cả năm)."""
-    __tablename__ = "muc_tieu"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    nv: Mapped[str] = mapped_column(String(120), index=True)
-    nam: Mapped[int] = mapped_column(Integer, index=True)
-    thang: Mapped[int] = mapped_column(Integer, default=0)  # 0 = cả năm, 1..12 = tháng
-    chi_tieu: Mapped[float] = mapped_column(Float, default=0)
+    so_chung_tu: Mapped[str] = mapped_column(String(80), default="")
+    ghi_chu: Mapped[str] = mapped_column(String(300), default="")
 
 
 class NguonDuLieu(Base):
-    """Cấu hình kết nối nguồn dữ liệu ngoài (Giai đoạn 3).
-
-    Mỗi màn hình (khach-hang/bao-gia/hop-dong/thanh-toan) có thể đồng bộ tự động
-    từ một URL trả về CSV hoặc JSON (vd Google Sheets publish-to-web, hoặc endpoint
-    xuất dữ liệu của phần mềm bán hàng/ERP công ty).
-    """
+    """Cấu hình kết nối nguồn dữ liệu ngoài (đồng bộ tự động từ URL CSV/JSON)."""
     __tablename__ = "nguon_du_lieu"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
