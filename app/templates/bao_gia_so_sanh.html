@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}So sánh báo giá {{ cg.ma_yc }} - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>So sánh báo giá · {{ cg.ma_yc }}</h1>
+  <a class="btn ghost" href="/check-gia">← Quay lại Check giá</a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi"><span>Hạng mục</span><b style="font-size:15px">{{ cg.hang_muc }}</b></div>
+  <div class="kpi"><span>Số lượng</span><b>{{ cg.so_luong|money }} {{ cg.dvt }}</b></div>
+  <div class="kpi"><span>Đơn giá dự toán</span><b>{{ cg.don_gia_du_toan|money }}</b></div>
+  <div class="kpi hl"><span>Giá trị dự toán</span><b>{{ du_toan|money }}</b></div>
+</div>
+
+{% if rows %}
+<p class="muted">Dòng <b style="color:#1baf7a">xanh</b> = giá thấp nhất · dòng <b>đậm</b> = NCC đang được chọn.
+Bấm <b>Chọn NCC này</b> để đánh dấu (x) — tự bỏ chọn các báo giá khác của yêu cầu.</p>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Mã BG</th><th>Nhà cung cấp</th><th>Đánh giá</th><th>Đơn giá</th>
+        <th>Thành tiền</th><th>TG giao (ngày)</th><th>Điều khoản TT</th>
+        <th>Hiệu lực</th><th>Chênh giá thấp nhất</th><th>Chênh dự toán</th>
+        <th>% dự toán</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="{{ 'row-good' if r.la_thap_nhat }}{{ ' chosen-row' if r.duoc_chon }}">
+        <td>{{ r.ma_bao_gia }}</td>
+        <td>{{ r.ten_ncc }}{% if r.duoc_chon %} ✅{% endif %}</td>
+        <td>{{ r.danh_gia_ncc }}</td>
+        <td>{{ r.don_gia|money }}</td>
+        <td><b>{{ r.thanh_tien|money }}</b></td>
+        <td>{{ r.thoi_gian_giao|money }}</td>
+        <td>{{ r.dieu_khoan_tt }}</td>
+        <td>{{ r.hieu_luc|ngay }}</td>
+        <td class="{{ 'danger' if r.chenh_thap_nhat > 0 }}">{{ r.chenh_thap_nhat|money }}</td>
+        <td class="{{ 'danger' if r.chenh_du_toan > 0 else 'good' }}">{{ r.chenh_du_toan|money }}</td>
+        <td>{{ r.phan_tram_du_toan|percent }}</td>
+        <td class="actions">
+          {% if not r.duoc_chon %}
+          <form method="post" action="/check-gia/{{ cg.ma_yc }}/chon/{{ r.ma_bao_gia }}">
+            <button type="submit" class="btn sm">Chọn NCC này</button>
+          </form>
+          {% else %}<span class="muted">Đang chọn</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có báo giá nào cho yêu cầu này. Vào màn hình <a href="/bao-gia/them">Báo giá</a>
+để nhập, chọn đúng Mã YC <b>{{ cg.ma_yc }}</b>.</p>
+{% endif %}
+{% endblock %}

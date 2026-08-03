@@ -378,3 +378,122 @@ def canh_bao(du_ans, nhas, check_gias, bao_gias, prs, pos, thanh_toans,
         "po_tre": po_tre,
         "tong": len(no_qua_han) + len(yc_qua_han) + len(po_tre),
     }
+
+
+# ---- Dự án của một PO (qua PR -> YC) -------------------------------------
+
+def du_an_cua_po(po: models.PO, pr_index: dict, cg_index: dict) -> str:
+    pr = pr_index.get(po.ma_pr)
+    if not pr:
+        return ""
+    cg = cg_index.get(pr.ma_yc)
+    return cg.ma_du_an if cg else ""
+
+
+# ---- So sánh báo giá theo 1 Yêu cầu check giá ---------------------------
+
+def so_sanh_bao_gia(cg: models.CheckGia, bao_gias, nhas) -> list[dict]:
+    """Các báo giá của 1 YC, kèm cột tự tính để so sánh và chọn NCC."""
+    ncc_index = _index(nhas, "ma_ncc")
+    nhom = [b for b in bao_gias if b.ma_yc == cg.ma_yc]
+    so_luong = cg.so_luong or 0
+    du_toan = cg_gia_tri_du_toan(cg)
+    thanh_tiens = [(so_luong * (b.don_gia or 0)) for b in nhom]
+    thap_nhat = min(thanh_tiens) if thanh_tiens else 0
+    rows = []
+    for b in nhom:
+        ncc = ncc_index.get(b.ma_ncc)
+        tt = so_luong * (b.don_gia or 0)
+        rows.append({
+            "ma_bao_gia": b.ma_bao_gia, "ma_ncc": b.ma_ncc,
+            "ten_ncc": ncc.ten if ncc else "", "danh_gia_ncc": ncc.danh_gia if ncc else "",
+            "don_gia": b.don_gia or 0, "thanh_tien": tt,
+            "thoi_gian_giao": b.thoi_gian_giao or 0,
+            "dieu_khoan_tt": ncc.dieu_khoan_tt if ncc else 0,
+            "hieu_luc": b.hieu_luc,
+            "chenh_thap_nhat": tt - thap_nhat,
+            "chenh_du_toan": tt - du_toan,
+            "phan_tram_du_toan": (tt - du_toan) / du_toan if du_toan else 0,
+            "la_thap_nhat": tt == thap_nhat and thanh_tiens,
+            "duoc_chon": (b.duoc_chon or "").strip().lower() == "x",
+        })
+    rows.sort(key=lambda r: (not r["duoc_chon"], r["thanh_tien"]))
+    return rows
+
+
+# ---- Thống kê nhà cung cấp ----------------------------------------------
+
+def thong_ke_ncc(nhas, bao_gias, pos, thanh_toans, today: date | None = None) -> list[dict]:
+    ncc_index = _index(nhas, "ma_ncc")
+    rows = []
+    for ncc in nhas:
+        bg = [b for b in bao_gias if b.ma_ncc == ncc.ma_ncc]
+        so_chon = sum(1 for b in bg if (b.duoc_chon or "").strip().lower() == "x")
+        ncc_pos = [p for p in pos if p.ma_ncc == ncc.ma_ncc]
+        gia_tri_mua = sum(po_gia_tri(p) for p in ncc_pos)
+        dg = [po_danh_gia_giao(p, today) for p in ncc_pos]
+        den_han = sum(1 for d in dg if d in ("Đúng hạn", "Giao trễ", "Trễ hạn"))
+        dung_han = sum(1 for d in dg if d == "Đúng hạn")
+        kq = [po_ket_qua_cl(p) for p in ncc_pos]
+        kiem = sum(1 for k in kq if k in ("Đạt", "Không đạt"))
+        dat = sum(1 for k in kq if k == "Đạt")
+        con = sum(cong_no_theo_po(p, thanh_toans, ncc_index, today)["con_phai_tra"]
+                  for p in ncc_pos)
+        rows.append({
+            "ma_ncc": ncc.ma_ncc, "ten": ncc.ten, "danh_gia": ncc.danh_gia,
+            "so_bao_gia": len(bg), "so_trung_thau": so_chon,
+            "ty_le_trung_thau": so_chon / len(bg) if bg else 0,
+            "so_po": len(ncc_pos), "gia_tri_mua": gia_tri_mua,
+            "ty_le_giao_dung_han": dung_han / den_han if den_han else 0,
+            "ty_le_dat_cl": dat / kiem if kiem else 0,
+            "con_phai_tra": con,
+        })
+    rows.sort(key=lambda r: r["gia_tri_mua"], reverse=True)
+    return rows
+
+
+# ---- Thống kê dự án ------------------------------------------------------
+
+def thong_ke_du_an(du_ans, check_gias, prs, pos) -> list[dict]:
+    cg_index = _index(check_gias, "ma_yc")
+    pr_index = _index(prs, "ma_pr")
+    yc_du_an = {c.ma_yc: c.ma_du_an for c in check_gias}
+    pr_du_an = {p.ma_pr: yc_du_an.get(p.ma_yc, "") for p in prs}
+    rows = []
+    for da in du_ans:
+        yc = [c for c in check_gias if c.ma_du_an == da.ma_du_an]
+        pr = [p for p in prs if pr_du_an.get(p.ma_pr) == da.ma_du_an]
+        po = [p for p in pos if du_an_cua_po(p, pr_index, cg_index) == da.ma_du_an]
+        gia_tri_po = sum(po_gia_tri(p) for p in po)
+        tiet_kiem = sum(po_tiet_kiem(p, pr_index) for p in po)
+        rows.append({
+            "ma_du_an": da.ma_du_an, "ten": da.ten, "trang_thai": da.trang_thai,
+            "ngan_sach": da.ngan_sach or 0,
+            "so_yc": len(yc), "tong_du_toan_yc": sum(cg_gia_tri_du_toan(c) for c in yc),
+            "so_pr": len(pr), "so_po": len(po), "gia_tri_po": gia_tri_po,
+            "tiet_kiem": tiet_kiem,
+            "ty_le_su_dung": gia_tri_po / (da.ngan_sach or 0) if (da.ngan_sach or 0) else 0,
+            "con_lai": (da.ngan_sach or 0) - gia_tri_po,
+        })
+    return rows
+
+
+# ---- Báo cáo tháng (12 tháng của 1 năm) ---------------------------------
+
+def bao_cao_thang(check_gias, prs, pos, thanh_toans) -> list[dict]:
+    """12 dòng tháng. Dữ liệu truyền vào nên đã lọc theo năm cần xem."""
+    pr_index = _index(prs, "ma_pr")
+    rows = []
+    for m in range(1, 13):
+        po_m = [p for p in pos if p.ngay and p.ngay.month == m]
+        rows.append({
+            "thang": m,
+            "so_yc": sum(1 for c in check_gias if c.ngay_nhan and c.ngay_nhan.month == m),
+            "so_pr": sum(1 for p in prs if p.ngay and p.ngay.month == m),
+            "so_po": len(po_m),
+            "gia_tri_po": sum(po_gia_tri(p) for p in po_m),
+            "tien_chi": sum(t.so_tien or 0 for t in thanh_toans
+                            if t.ngay and t.ngay.month == m),
+            "tiet_kiem": sum(po_tiet_kiem(p, pr_index) for p in po_m),
+        })
+    return rows

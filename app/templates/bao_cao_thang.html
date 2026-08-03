@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo tháng - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Báo cáo theo tháng {% if nam_chon %}· năm {{ nam_chon }}{% endif %}</h1>
+  <form method="get" action="/bao-cao-thang" class="inline-filter">
+    <label>Năm
+      <select name="nam" onchange="this.form.submit()">
+        {% for n in cac_nam %}
+        <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Tháng</th><th>Số YC</th><th>Số PR</th><th>Số PO</th>
+        <th>Giá trị PO</th><th>Tiền chi NCC</th><th>Tiết kiệm</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><b>Tháng {{ r.thang }}</b></td>
+        <td>{{ r.so_yc }}</td><td>{{ r.so_pr }}</td><td>{{ r.so_po }}</td>
+        <td>{{ r.gia_tri_po|money }}</td><td>{{ r.tien_chi|money }}</td>
+        <td class="good">{{ r.tiet_kiem|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="row-good">
+        <td><b>Cả năm</b></td>
+        <td><b>{{ tong.so_yc }}</b></td><td><b>{{ tong.so_pr }}</b></td>
+        <td><b>{{ tong.so_po }}</b></td><td><b>{{ tong.gia_tri_po|money }}</b></td>
+        <td><b>{{ tong.tien_chi|money }}</b></td><td><b>{{ tong.tiet_kiem|money }}</b></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Thống kê dự án - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Thống kê dự án</h1>
+  <form method="get" action="/thong-ke-du-an" class="inline-filter">
+    <label>Năm
+      <select name="nam" onchange="this.form.submit()">
+        <option value="">Tất cả</option>
+        {% for n in cac_nam %}
+        <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+</div>
+
+{% if rows %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Mã dự án</th><th>Tên</th><th>Trạng thái</th><th>Ngân sách</th>
+        <th>Số YC</th><th>Dự toán YC</th><th>Số PR</th><th>Số PO</th>
+        <th>Giá trị PO</th><th>Tiết kiệm</th><th>% dùng ngân sách</th><th>Còn lại</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.ma_du_an }}</td><td>{{ r.ten }}</td><td>{{ r.trang_thai }}</td>
+        <td>{{ r.ngan_sach|money }}</td><td>{{ r.so_yc }}</td>
+        <td>{{ r.tong_du_toan_yc|money }}</td><td>{{ r.so_pr }}</td><td>{{ r.so_po }}</td>
+        <td><b>{{ r.gia_tri_po|money }}</b></td>
+        <td class="good">{{ r.tiet_kiem|money }}</td>
+        <td class="{{ 'danger' if r.ty_le_su_dung > 1 }}">{{ r.ty_le_su_dung|percent }}</td>
+        <td>{{ r.con_lai|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có dự án nào.</p>
+{% endif %}
+{% endblock %}

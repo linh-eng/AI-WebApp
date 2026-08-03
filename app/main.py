@@ -232,6 +232,67 @@ def _display_value(field: dict, value):
     return value
 
 
+# ---- Cột TỰ TÍNH hiển thị kèm trong danh sách ---------------------------
+
+COMPUTED_HEADERS = {
+    "check-gia": ["Giá trị dự toán", "SLA trả giá", "Số NCC báo giá", "Giá chốt", "Tình trạng PR"],
+    "bao-gia": ["Tên NCC", "Thành tiền", "Chênh so dự toán"],
+    "pr": ["Giá trị dự toán"],
+    "po": ["Giá trị PO", "Tiết kiệm", "Giao hàng", "Kết quả CL", "Hạn thanh toán"],
+    "thanh-toan": ["Đã trả cho PO", "Còn phải trả PO"],
+}
+
+
+def _computed_cells(db: Session, slug: str, records: list) -> list[list]:
+    """Trả về danh sách cột tự tính cho mỗi bản ghi (khớp thứ tự records)."""
+    if slug not in COMPUTED_HEADERS:
+        return [[] for _ in records]
+    c = calculations
+    bao_gias = db.scalars(select(models.BaoGia)).all()
+    prs = db.scalars(select(models.PR)).all()
+    pos = db.scalars(select(models.PO)).all()
+    thanh_toans = db.scalars(select(models.ThanhToan)).all()
+    check_gias = db.scalars(select(models.CheckGia)).all()
+    nhas = db.scalars(select(models.NhaCungCap)).all()
+    cg_index = {x.ma_yc: x for x in check_gias}
+    pr_index = {x.ma_pr: x for x in prs}
+    ncc_index = {x.ma_ncc: x for x in nhas}
+    po_index = {x.ma_po: x for x in pos}
+
+    out = []
+    for r in records:
+        if slug == "check-gia":
+            cg = cg_index.get(r.ma_yc)
+            tinh_pr = "Đã lập PR" if any(p.ma_yc == r.ma_yc for p in prs) else "Chưa lập PR"
+            out.append([
+                _money(c.cg_gia_tri_du_toan(r)), c.cg_sla(r) or "—",
+                c.cg_so_ncc_bao_gia(r, bao_gias),
+                _money(c.cg_gia_tri_chot(r, bao_gias)), tinh_pr,
+            ])
+        elif slug == "bao-gia":
+            ncc = ncc_index.get(r.ma_ncc)
+            tt = c.bg_thanh_tien(r, cg_index)
+            cg = cg_index.get(r.ma_yc)
+            chenh = tt - c.cg_gia_tri_du_toan(cg) if cg else 0
+            out.append([ncc.ten if ncc else "", _money(tt), _money(chenh)])
+        elif slug == "pr":
+            out.append([_money(c.pr_gia_tri_du_toan(r))])
+        elif slug == "po":
+            out.append([
+                _money(c.po_gia_tri(r)), _money(c.po_tiet_kiem(r, pr_index)),
+                c.po_danh_gia_giao(r) or "—", c.po_ket_qua_cl(r) or "—",
+                _ngay(c.po_han_thanh_toan(r, ncc_index)),
+            ])
+        elif slug == "thanh-toan":
+            po = po_index.get(r.ma_po)
+            gt = c.po_gia_tri(po) if po else 0
+            da_tra = c.da_tra_theo_po(r.ma_po, thanh_toans)
+            out.append([_money(da_tra), _money(gt - da_tra)])
+        else:
+            out.append([])
+    return out
+
+
 # ---- Lấy toàn bộ dữ liệu (có lọc theo năm cho các sheet giao dịch) --------
 
 def _nam_cua(rec, attr) -> int | None:
@@ -633,6 +694,91 @@ def can_xu_ly(request: Request, db: Session = Depends(get_db)):
     })
 
 
+# ---- So sánh báo giá & chọn NCC cho 1 Yêu cầu check giá -----------------
+
+@app.get("/check-gia/{ma_yc}/bao-gia", response_class=HTMLResponse)
+def so_sanh_bao_gia(ma_yc: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    cg = db.scalar(select(models.CheckGia).where(models.CheckGia.ma_yc == ma_yc))
+    if not cg:
+        return RedirectResponse("/check-gia", status_code=303)
+    nhas = db.scalars(select(models.NhaCungCap)).all()
+    bao_gias = db.scalars(select(models.BaoGia)).all()
+    rows = calculations.so_sanh_bao_gia(cg, bao_gias, nhas)
+    return templates.TemplateResponse(request, "bao_gia_so_sanh.html", {
+        "request": request, "user": user, "active": "check-gia", "cg": cg,
+        "rows": rows, "du_toan": calculations.cg_gia_tri_du_toan(cg),
+    })
+
+
+@app.post("/check-gia/{ma_yc}/chon/{ma_bao_gia}")
+def chon_ncc(ma_yc: str, ma_bao_gia: str, request: Request, db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    # Bỏ chọn tất cả báo giá của YC, rồi chọn đúng 1 báo giá.
+    for b in db.scalars(select(models.BaoGia).where(models.BaoGia.ma_yc == ma_yc)).all():
+        b.duoc_chon = "x" if b.ma_bao_gia == ma_bao_gia else ""
+    db.commit()
+    return RedirectResponse(f"/check-gia/{ma_yc}/bao-gia", status_code=303)
+
+
+# ---- Thống kê NCC / dự án / báo cáo tháng -------------------------------
+
+@app.get("/thong-ke-ncc", response_class=HTMLResponse)
+def thong_ke_ncc_view(request: Request, nam: int | None = None,
+                      db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    _, nhas, _, bao_gias, _, pos, thanh_toans = _tai_du_lieu(db, nam)
+    rows = calculations.thong_ke_ncc(nhas, bao_gias, pos, thanh_toans)
+    return templates.TemplateResponse(request, "thong_ke_ncc.html", {
+        "request": request, "user": user, "active": "thong-ke-ncc", "rows": rows,
+        "cac_nam": _danh_sach_nam(db), "nam_chon": nam,
+    })
+
+
+@app.get("/thong-ke-du-an", response_class=HTMLResponse)
+def thong_ke_du_an_view(request: Request, nam: int | None = None,
+                        db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    du_ans, _, check_gias, _, prs, pos, _ = _tai_du_lieu(db, nam)
+    rows = calculations.thong_ke_du_an(du_ans, check_gias, prs, pos)
+    return templates.TemplateResponse(request, "thong_ke_du_an.html", {
+        "request": request, "user": user, "active": "thong-ke-du-an", "rows": rows,
+        "cac_nam": _danh_sach_nam(db), "nam_chon": nam,
+    })
+
+
+@app.get("/bao-cao-thang", response_class=HTMLResponse)
+def bao_cao_thang_view(request: Request, nam: int | None = None,
+                       db: Session = Depends(get_db)):
+    user = current_user(request, db)
+    if not user:
+        return _redirect_login()
+    if nam is None:
+        ds = _danh_sach_nam(db)
+        nam = ds[-1] if ds else date.today().year
+    _, _, check_gias, _, prs, pos, thanh_toans = _tai_du_lieu(db, nam)
+    rows = calculations.bao_cao_thang(check_gias, prs, pos, thanh_toans)
+    tong = {
+        "so_yc": sum(r["so_yc"] for r in rows), "so_pr": sum(r["so_pr"] for r in rows),
+        "so_po": sum(r["so_po"] for r in rows),
+        "gia_tri_po": sum(r["gia_tri_po"] for r in rows),
+        "tien_chi": sum(r["tien_chi"] for r in rows),
+        "tiet_kiem": sum(r["tiet_kiem"] for r in rows),
+    }
+    return templates.TemplateResponse(request, "bao_cao_thang.html", {
+        "request": request, "user": user, "active": "bao-cao-thang", "rows": rows,
+        "tong": tong, "cac_nam": _danh_sach_nam(db), "nam_chon": nam,
+    })
+
+
 # ---- Bộ khung CRUD chung theo /{slug} (đăng ký CUỐI) --------------------
 
 @app.get("/{slug}", response_class=HTMLResponse)
@@ -657,14 +803,17 @@ def list_view(slug: str, request: Request, nam: int | None = None,
             records = [r for r in records
                        if getattr(r, date_attr) and getattr(r, date_attr).month == thang]
 
+    computed = _computed_cells(db, slug, records)
     rows = []
-    for rec in records:
+    for rec, extra in zip(records, computed):
         cells = [_display_value(f, getattr(rec, f["name"])) for f in fields]
-        rows.append({"pk": getattr(rec, ent["pk"]), "cells": cells})
+        rows.append({"pk": getattr(rec, ent["pk"]), "cells": cells + extra})
 
+    headers = [f["label"] for f in fields] + COMPUTED_HEADERS.get(slug, [])
     return templates.TemplateResponse(request, "list.html", {
         "request": request, "user": user, "slug": slug, "active": slug,
-        "title": ent["title"], "headers": [f["label"] for f in fields], "rows": rows,
+        "title": ent["title"], "headers": headers, "rows": rows,
+        "n_manual": len(fields), "n_computed": len(COMPUTED_HEADERS.get(slug, [])),
         "co_loc_ngay": bool(date_attr), "co_loc_kh": False,
         "cac_nam": cac_nam, "nam_chon": nam, "thang_chon": thang,
         "ds_khach": [], "kh_chon": "",

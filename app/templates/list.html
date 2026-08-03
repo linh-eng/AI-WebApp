@@ -48,13 +48,19 @@
 <div class="table-wrap">
   <table>
     <thead>
-      <tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}<th></th></tr>
+      <tr>
+        {% for h in headers %}
+        <th class="{{ 'col-tinh' if loop.index0 >= n_manual }}"
+            title="{{ 'Cột tự tính' if loop.index0 >= n_manual else '' }}">{{ h }}</th>
+        {% endfor %}<th></th>
+      </tr>
     </thead>
     <tbody>
       {% for row in rows %}
       <tr>
-        {% for c in row.cells %}<td>{{ c }}</td>{% endfor %}
+        {% for c in row.cells %}<td class="{{ 'col-tinh' if loop.index0 >= n_manual }}">{{ c }}</td>{% endfor %}
         <td class="actions">
+          {% if slug == 'check-gia' %}<a href="/check-gia/{{ row.pk }}/bao-gia">So sánh BG</a>{% endif %}
           <a href="/{{ slug }}/sua/{{ row.pk }}">Sửa</a>
           {% if can_delete(user) %}
           <form method="post" action="/{{ slug }}/xoa/{{ row.pk }}"

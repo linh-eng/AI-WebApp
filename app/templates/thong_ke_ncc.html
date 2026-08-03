@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Thống kê NCC - THNG{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Thống kê nhà cung cấp</h1>
+  <form method="get" action="/thong-ke-ncc" class="inline-filter">
+    <label>Năm
+      <select name="nam" onchange="this.form.submit()">
+        <option value="">Tất cả</option>
+        {% for n in cac_nam %}
+        <option value="{{ n }}" {{ 'selected' if nam_chon == n }}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+</div>
+
+{% if rows %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Mã NCC</th><th>Tên</th><th>Đánh giá</th><th>Số báo giá</th>
+        <th>Số lần trúng thầu</th><th>Tỷ lệ trúng thầu</th><th>Số PO</th>
+        <th>Giá trị mua</th><th>Giao đúng hạn</th><th>Đạt chất lượng</th>
+        <th>Còn phải trả</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.ma_ncc }}</td><td>{{ r.ten }}</td><td>{{ r.danh_gia }}</td>
+        <td>{{ r.so_bao_gia }}</td><td>{{ r.so_trung_thau }}</td>
+        <td>{{ r.ty_le_trung_thau|percent }}</td><td>{{ r.so_po }}</td>
+        <td><b>{{ r.gia_tri_mua|money }}</b></td>
+        <td>{{ r.ty_le_giao_dung_han|percent }}</td>
+        <td>{{ r.ty_le_dat_cl|percent }}</td>
+        <td class="{{ 'danger' if r.con_phai_tra > 0 }}">{{ r.con_phai_tra|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">Chưa có nhà cung cấp nào.</p>
+{% endif %}
+{% endblock %}

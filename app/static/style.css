@@ -135,3 +135,8 @@ code{background:#eef3f9;padding:1px 6px;border-radius:4px;font-size:13px}
 .row-good{ background:#f0fdf4; }
 .group-title{ margin:22px 0 8px; font-size:15px; color:#334155;
   border-left:4px solid #2a78d6; padding-left:8px; }
+
+/* Cột tự tính trong bảng danh sách (phân biệt với ô nhập tay) */
+th.col-tinh{ background:#eef4fb; color:#2a5a8c; font-style:italic; }
+td.col-tinh{ background:#f7fafd; color:#334155; }
+tr.chosen-row{ font-weight:700; box-shadow:inset 3px 0 0 #1baf7a; }
