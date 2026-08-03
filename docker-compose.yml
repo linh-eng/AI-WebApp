@@ -1,18 +1,23 @@
 services:
   web:
     build: .
+    # Cổng máy chủ 8010 -> cổng trong container 8000. Đồng nghiệp vào :8010
+    # (dùng 8010 để chạy song song với app khác đang ở cổng 8000).
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       # ĐỔI khoá bí mật và mật khẩu admin khi chạy thật
       SECRET_KEY: "doi-khoa-bi-mat-nay"
       ADMIN_USERNAME: "admin"
       ADMIN_PASSWORD: "admin123"
+      # Thông tin công ty hiện trên PDF Đơn đặt hàng (PO):
+      COMPANY_NAME: "CÔNG TY THNG"
+      COMPANY_INFO: "Địa chỉ: ... · ĐT: ... · MST: ..."
       # Muốn dùng PostgreSQL thì bỏ comment và trỏ tới CSDL của công ty:
       # DATABASE_URL: "postgresql+psycopg2://user:pass@db:5432/thng"
     volumes:
-      - thng_data:/app/data
+      - thng_muahang_data:/app/data
     restart: unless-stopped
 
 volumes:
-  thng_data:
+  thng_muahang_data:
