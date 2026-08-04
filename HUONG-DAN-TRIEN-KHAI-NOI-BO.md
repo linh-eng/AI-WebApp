@@ -54,6 +54,19 @@ Mở trình duyệt (Chrome/Edge), dùng **một trong hai** địa chỉ (scrip
 4. Ứng dụng **chỉ chạy trong mạng nội bộ** — không mở ra internet trừ khi có IT
    cấu hình bảo mật.
 
+## E2. Tự khởi động khi bật máy (khuyến nghị cho máy chủ)
+
+Để mỗi lần bật máy chủ, WebApp tự chạy mà không phải bấm tay:
+
+1. Trong thư mục app, **bấm đúp `cai-tu-khoi-dong.bat`** (chạy một lần).
+2. Từ lần sau, khi bật máy và **đăng nhập Windows**, WebApp tự chạy (cửa sổ thu nhỏ
+   dưới thanh tác vụ — đừng đóng nó).
+3. Muốn tắt tính năng này: chạy **`tat-tu-khoi-dong.bat`**.
+
+> Cách này chạy khi **đăng nhập Windows**. Nếu muốn chạy ngay khi bật máy mà chưa
+> đăng nhập, cần bật **tự động đăng nhập (auto-login)** cho máy chủ, hoặc dùng
+> **Task Scheduler** (nhờ IT) — báo em nếu cần hướng dẫn.
+
 ## F. Sao lưu dữ liệu
 
 - Toàn bộ dữ liệu nằm trong thư mục **`data/`** (file `thng.db`).
